@@ -26,9 +26,104 @@ test('the spinner paints a Raster and blits frames', async ($, on) => {
     props: { word: 'x', message: null, suffix: '…', mode: 'thinking' },
   })
   expect(await ui.find({ type: 'Raster' })).toBeTruthy()
-  for (let i = 0; i < 60; i++) await clock.advance(33)
+  for (let i = 0; i < 60; i++) await clock.advance(45)
   for (const i of [0, 10, 20, 40, 59]) console.log(String(i).padStart(3), frames[i])
   expect(frames.length).toBeGreaterThan(50)
   expect(frames[59]).toMatch(/Tracing the flake input/)
+  await ui.unmount()
+})
+
+test('wide and combining characters never reach the Raster', async ($, on) => {
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 't2' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'w',
+    props: { word: 'Hi͡ っ 😀 ok', message: null, suffix: '…', mode: 'thinking' },
+  })
+  expect(await ui.find({ type: 'Raster' })).toBeTruthy()
+  await ui.unmount()
+})
+
+test('the 🜏 marker becomes a lookalike in the Raster', async ($, on) => {
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 't3' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'm',
+    props: { word: '🜏 Glyphweaving', message: null, suffix: '…', mode: 'thinking' },
+  })
+  expect(await ui.find({ type: 'Raster' })).toBeTruthy()
+  await ui.unmount()
+})
+
+test('the real glyph is drawn as text beside the Raster', async ($, on) => {
+  mock.clock(on)
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 't4' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'g',
+    props: { word: '\u{1F75E} Sublimating', message: null, suffix: '…', mode: 'thinking' },
+  })
+  expect(await ui.find({ type: 'Raster' })).toBeTruthy()
+  expect((await ui.find({ type: 'Text', text: /\u{1F75E}/u }))?.text).toContain('\u{1F75E}')
+  await ui.unmount()
+})
+
+test('the readout counts tokens and thinking time', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const frames: string[] = []
+  on('ui.blit', (_, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    let s = ''
+    for (let i = 0; i < w.length; i += 3) s += String.fromCodePoint(w[i])
+    frames.push(s)
+    return { value: {} }
+  })
+  on('turn.step', async function* (_, e: any) {
+    yield { kind: 'thinking', index: 0, text: 'x'.repeat(400) }
+    await clock.advance(3000)
+    yield { kind: 'thinking', index: 0, text: 'x'.repeat(400) }
+    yield { kind: 'text', index: 1, text: 'y'.repeat(800) }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 733, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 't5' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'r',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  const run = $.turn.step({ turnId: 't5', index: 0, model: 'm', messageCount: 1 } as any)
+  for await (const _ of run) {}
+  await clock.advance(2000)
+  console.log(frames[frames.length - 1]?.trim())
+  expect(frames[frames.length - 1]).toMatch(/↓ 733 tokens/)
+  expect(frames[frames.length - 1]).toMatch(/thought for/)
   await ui.unmount()
 })
