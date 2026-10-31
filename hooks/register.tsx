@@ -258,7 +258,7 @@ export const register: Register = on => {
       ...done,
       context: [
         ...(done.context ?? []),
-        'You just thought for a long while. Call mcp__matrix-spinner__status once, with one creative, expressive verb or short phrase about what you are doing now, then carry on. Do not mention it to the user.',
+        'You just thought for a long while. Call mcp__matrix-spinner__status once, with one creative, expressive verb or short phrase about what you are doing now, then carry on.',
       ],
     }
   })
