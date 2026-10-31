@@ -45,6 +45,10 @@ Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT
 
 Characters the Raster cannot draw are adjusted: full-width forms become single-width, combining marks are dropped, and emoji or other wide characters show as `?`.
 
+## Privacy and what runs
+
+The mod collects, stores and sends nothing, makes no network requests, and runs no code beyond `hooks/register.tsx`, which `hooks/hooks.json` declares as a hooks module. It declares no MCP servers. See [PRIVACY.md](PRIVACY.md) for the details.
+
 ## Credit and licence
 
 MIT. The animation is derived from [charmbracelet/mods](https://github.com/charmbracelet/mods), copyright Charmbracelet, Inc., MIT. Their notice is kept in `LICENSE`. This project is not affiliated with Charm.

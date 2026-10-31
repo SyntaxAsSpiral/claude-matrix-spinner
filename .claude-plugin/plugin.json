@@ -1,6 +1,6 @@
 {
   "name": "matrix-spinner",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A matrix-style scrambling spinner for Claude Code with a gleam, a live readout and a verb the model can set after a long think, ported from the spinner in charmbracelet/mods.",
   "author": {
     "name": "SyntaxAsSpiral"
