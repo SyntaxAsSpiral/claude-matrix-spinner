@@ -1,0 +1,5 @@
+{
+  "name": "claude-matrix-spinner",
+  "owner": { "name": "SyntaxAsSpiral" },
+  "plugins": [{ "name": "matrix-spinner", "source": "./" }]
+}

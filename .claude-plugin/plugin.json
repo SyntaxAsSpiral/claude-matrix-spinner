@@ -1,0 +1,10 @@
+{
+  "name": "matrix-spinner",
+  "version": "0.1.0",
+  "description": "A matrix-style scrambling spinner for Claude Code with a gleam, ported from the spinner in charmbracelet/mods.",
+  "author": { "name": "SyntaxAsSpiral" },
+  "license": "MIT",
+  "repository": "https://github.com/SyntaxAsSpiral/claude-matrix-spinner",
+  "keywords": ["spinner", "ui", "animation", "terminal"],
+  "types": "./types/index.d.ts"
+}
