@@ -127,3 +127,42 @@ test('the readout counts tokens and thinking time', async ($, on) => {
   expect(frames[frames.length - 1]).toMatch(/thought for/)
   await ui.unmount()
 })
+
+test('a long think earns one nudge on the next tool result', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  on('ui.blit', () => ({ value: {} }))
+  on('tool.call', () => ({ result: {} }))
+  let thinkFor = 30000
+  on('turn.step', async function* (_, e: any) {
+    yield { kind: 'thinking', index: 0, text: 'x' }
+    await clock.advance(thinkFor)
+    yield { kind: 'text', index: 1, text: 'y' }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 10, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'long1' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'n',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  for await (const _ of $.turn.step({ turnId: 'long1', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  const first: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
+  expect((first.context ?? []).join(' ')).toContain('mcp__matrix-spinner__status')
+  const second: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
+  expect((second.context ?? []).length).toBe(0)
+
+  // a short think earns nothing
+  thinkFor = 5000
+  await $.turn.start({ text: 'again', turnId: 'long2' })
+  for await (const _ of $.turn.step({ turnId: 'long2', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  const third: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
+  expect((third.context ?? []).length).toBe(0)
+  await ui.unmount()
+})

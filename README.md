@@ -24,13 +24,14 @@ Answer `y` to add the marketplace, then choose a scope.
 
 ## What it shows
 
-- **The verb** starts as the one Claude Code picked for the turn. Every 10 seconds the mod swaps in a random one from your own `spinnerVerbs` setting, so the scramble and the gleam play again. With no `spinnerVerbs` set, it keeps the engine's verb.
+- **The verb** is the one Claude Code picked at the start of the turn, and it stays. Your own `spinnerVerbs` setting still works as normal: the engine draws from it and the mod shows whatever it picks.
+- **A long think earns a new verb.** If a single stretch of thinking reaches 10 seconds, the next tool result carries a hidden note asking the model to call the status tool with one creative verb about what it is doing. The verb is set, and the scramble and the gleam play again. It fires once per long think, and only where a tool call follows.
 - **Alchemical glyphs.** A verb that begins with an alchemical symbol (U+1F700 to U+1F77F), such as `🝞 Sublimating`, gets that symbol drawn in front as plain text, since the Raster cannot hold it.
 - **The readout** shows elapsed time (`14s`, then `1:05`), the output tokens of the turn (an estimate while streaming, exact once each step ends), and `thinking`, then `thought for 3s` for a few seconds after thinking ends. Subagents are not counted.
-- **A tool**, `mcp__matrix-spinner__status`, takes a short text. If the model calls it, that text replaces the verb and the effect plays again. Nothing in the mod asks the model to call it.
+- **A tool**, `mcp__matrix-spinner__status`, takes a short text. It sets the verb and plays the effect again. Nothing in the system prompt asks the model to call it.
 - Terminal only. On other surfaces, or while the engine shows a state message of its own, the usual spinner is drawn.
 
-The mod reads your `spinnerVerbs` setting, read only, through Claude Code's settings API. It sends nothing anywhere.
+The mod reads no settings and sends nothing anywhere.
 
 ## Colours and knobs
 
@@ -40,7 +41,7 @@ A `Raster` takes plain RGB, so the colours are fixed and do not follow your them
 - `TEXT`: the verb, `#f5e0dc` (Catppuccin Mocha rosewater).
 - `GLEAM`: the gleam and the flash, `#ffffff`.
 
-Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT_FRAMES` (how fast the gleam moves), `PULSE_FRAMES` (flash speed), `ROTATE_S` (seconds between verbs), `THOUGHT_SHOW_MS` (how long `thought for` stays).
+Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT_FRAMES` (how fast the gleam moves), `PULSE_FRAMES` (flash speed), `LONG_THINK_MS` (thinking time that earns a new verb), `THOUGHT_SHOW_MS` (how long `thought for` stays).
 
 Characters the Raster cannot draw are adjusted: full-width forms become single-width, combining marks are dropped, and emoji or other wide characters show as `?`.
 

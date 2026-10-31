@@ -17,7 +17,7 @@ const MAX_DOTS = 3
 const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
 const THOUGHT_SHOW_MS = 4000 // how long 'thought for' stays after thinking ends
-const ROTATE_S = 10 // seconds before the verb changes on its own
+const LONG_THINK_MS = 10000 // a stretch of thinking this long earns the model a nudge to pick a verb
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
 const DIM = 0x908caa // Rose Pine subtle
@@ -35,9 +35,7 @@ const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
 let secsTimer: { cancel: () => void } | null = null
-let rotateTimer: { cancel: () => void } | null = null
-let pool: string[] = [] // the person's own spinnerVerbs, read once
-let poolLoaded = false
+let owedVerb = false // set after a long think; the next tool result carries a nudge
 let startedAt = 0
 let mainTurn = '' // the turn whose steps are counted; a subagent's are not
 let outTokens = 0 // output tokens of finished steps, as the API reported them
@@ -148,6 +146,7 @@ function closeThinking(now: number) {
   if (thinkFrom >= 0) {
     lastThoughtMs = now - thinkFrom
     thoughtUntil = now + THOUGHT_SHOW_MS
+    if (lastThoughtMs >= LONG_THINK_MS) owedVerb = true
   }
   thinkFrom = -1
   isThinking = false
@@ -213,27 +212,6 @@ function step($: any) {
   void $.ui.blit({ requestId: site, key: KEY, columns, rows: 1, cells: compose(now, lit, flash) })
 }
 
-async function loadPool($: any) {
-  if (poolLoaded) return
-  poolLoaded = true
-  try {
-    const found = await $.settings.read({ key: 'spinnerVerbs' })
-    const verbs = found?.verbs
-    pool = Array.isArray(verbs) ? verbs.filter((v: unknown) => typeof v === 'string') : []
-  } catch {
-    pool = []
-  }
-}
-
-async function rotate($: any) {
-  if (pool.length === 0) return
-  const text = pool[rnd(pool.length)]
-  reset(split(text).text, tick * FRAME_MS)
-  glintTick = 0
-  isCustom = true
-  await update($, shapeAtom, (): Shape => ({ label: text }))
-}
-
 async function tickSecs($: any) {
   elapsed = Math.max(0, Math.floor(((await $.clock.now()) - startedAt) / 1000))
 }
@@ -243,8 +221,6 @@ function stop() {
   timer = null
   secsTimer?.cancel()
   secsTimer = null
-  rotateTimer?.cancel()
-  rotateTimer = null
   site = ''
 }
 
@@ -273,6 +249,20 @@ export const register: Register = on => {
     return { result: 'ok' }
   })
 
+  on('tool.call', async ($, e, next) => {
+    if (e.tool === 'mcp__matrix-spinner__status') owedVerb = false
+    const done = await next(e)
+    if (!owedVerb || done.deny !== undefined) return done
+    owedVerb = false
+    return {
+      ...done,
+      context: [
+        ...(done.context ?? []),
+        'You just thought for a long while. Call mcp__matrix-spinner__status once, with one creative, expressive verb or short phrase about what you are doing now, then carry on. Do not mention it to the user.',
+      ],
+    }
+  })
+
   on('turn.start', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
     stop()
@@ -285,6 +275,7 @@ export const register: Register = on => {
     startedAt = await $.clock.now()
     elapsed = 0
     mainTurn = e.turnId
+    owedVerb = false
     outTokens = 0
     stepChars = 0
     lastThoughtMs = 0
@@ -294,8 +285,6 @@ export const register: Register = on => {
     thoughtThisStep = false
     timer = $.clock.every(FRAME_MS, () => step($))
     secsTimer = $.clock.every(1000, () => void tickSecs($))
-    await loadPool($)
-    rotateTimer = $.clock.every(ROTATE_S * 1000, () => void rotate($))
     return next(e)
   })
 
