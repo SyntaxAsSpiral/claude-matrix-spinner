@@ -414,8 +414,12 @@ export const register: Register = (on, options) => {
     if (p.tool !== STATUS_TOOL || p.isExpanded || p.isErrored || p.isInterrupted) return next(e)
     const text = String((p.input as { text?: unknown } | undefined)?.text ?? '').trim()
     if (text === '') return next(e)
-    const { Text } = $.ui.resolve(e)
-    return <Text>{'● updated verb: ' + text}</Text>
+    const { Box, Text } = $.ui.resolve(e)
+    return (
+      <Box paddingTop={1}>
+        <Text>{'● updated verb: ' + text}</Text>
+      </Box>
+    )
   })
   on('ui.render', { component: 'ToolResult' }, async ($, e, next) => {
     if (e.props.tool !== STATUS_TOOL || e.props.isExpanded || e.props.isErrored) return next(e)
