@@ -4,7 +4,6 @@ import { clockText } from './register'
 test('the spinner paints a Raster and blits frames', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -20,11 +19,10 @@ test('the spinner paints a Raster and blits frames', async ($, on) => {
   })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   await $.turn.start({ text: 'hi', turnId: 't1' })
-  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Tracing the flake input' })
 
   const ui = await $.ui.mount({
     plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'r',
-    props: { word: 'x', message: null, suffix: '…', mode: 'thinking' },
+    props: { word: 'Tracing the flake input', message: null, suffix: '…', mode: 'thinking' },
   })
   expect(await ui.find({ type: 'Raster' })).toBeTruthy()
   for (let i = 0; i < 60; i++) await clock.advance(45)
@@ -36,7 +34,6 @@ test('the spinner paints a Raster and blits frames', async ($, on) => {
 
 test('wide and combining characters never reach the Raster', async ($, on) => {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -54,7 +51,6 @@ test('wide and combining characters never reach the Raster', async ($, on) => {
 
 test('the 🜏 marker becomes a lookalike in the Raster', async ($, on) => {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -73,7 +69,6 @@ test('the 🜏 marker becomes a lookalike in the Raster', async ($, on) => {
 test('the real glyph is drawn as text beside the Raster', async ($, on) => {
   mock.clock(on)
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -93,7 +88,6 @@ test('the real glyph is drawn as text beside the Raster', async ($, on) => {
 test('the readout counts tokens and thinking time', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -129,100 +123,9 @@ test('the readout counts tokens and thinking time', async ($, on) => {
   await ui.unmount()
 })
 
-test('a long think earns one nudge on the next tool result', async ($, on) => {
-  const clock = mock.clock(on)
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
-  on('turn.start', (_, e) => ({ turnId: e.turnId }))
-  on('ui.render', ($, e) => {
-    const { Text } = $.ui.resolve(e)
-    return <Text>engine</Text>
-  })
-  on('ui.blit', () => ({ value: {} }))
-  on('tool.call', () => ({ result: {} }))
-  let thinkFor = 30000
-  on('turn.step', async function* (_, e: any) {
-    yield { kind: 'thinking', index: 0, text: 'x' }
-    await clock.advance(thinkFor)
-    yield { kind: 'text', index: 1, text: 'y' }
-    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 10, input_tokens: 0, model: 'm' } } as any
-  })
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  await $.turn.start({ text: 'hi', turnId: 'long1' })
-  const ui = await $.ui.mount({
-    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'n',
-    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
-  })
-  for await (const _ of $.turn.step({ turnId: 'long1', index: 0, model: 'm', messageCount: 1 } as any)) {}
-  const first: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  expect((first.context ?? []).join(' ')).toContain('mcp__matrix-spinner__status')
-  const second: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  expect((second.context ?? []).length).toBe(0)
-
-  // a short think earns nothing
-  thinkFor = 5000
-  await $.turn.start({ text: 'again', turnId: 'long2' })
-  for await (const _ of $.turn.step({ turnId: 'long2', index: 0, model: 'm', messageCount: 1 } as any)) {}
-  const third: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  expect((third.context ?? []).length).toBe(0)
-  await ui.unmount()
-})
-
-async function nudgeContext($: any, on: any, thinkFor: number) {
-  const clock = mock.clock(on)
-  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
-  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
-  on('ui.render', ($: any, e: any) => {
-    const { Text } = $.ui.resolve(e)
-    return <Text>engine</Text>
-  })
-  on('ui.blit', () => ({ value: {} }))
-  on('tool.call', () => ({ result: {} }))
-  on('turn.step', async function* (_: any, e: any) {
-    yield { kind: 'thinking', index: 0, text: 'x' }
-    await clock.advance(thinkFor)
-    yield { kind: 'text', index: 1, text: 'y' }
-    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 10, input_tokens: 0, model: 'm' } } as any
-  })
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  await $.turn.start({ text: 'hi', turnId: 's1' })
-  const ui = await $.ui.mount({
-    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 's',
-    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
-  })
-  for await (const _ of $.turn.step({ turnId: 's1', index: 0, model: 'm', messageCount: 1 } as any)) {}
-  const r: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  await ui.unmount()
-  return (r.context ?? []).join(' ')
-}
-
-test('longThinkSeconds lowers the threshold', { options: { longThinkSeconds: 3 } }, async ($, on) => {
-  expect(await nudgeContext($, on, 5000)).toContain('mcp__matrix-spinner__status')
-})
-
-test('longThinkSeconds raises the threshold', { options: { longThinkSeconds: 60 } }, async ($, on) => {
-  expect(await nudgeContext($, on, 30000)).toBe('')
-})
-
-test('longThinkSeconds 0 turns the nudge off', { options: { longThinkSeconds: 0 } }, async ($, on) => {
-  expect(await nudgeContext($, on, 30000)).toBe('')
-})
-
-test('an empty verb from the tool leaves the engine verb alone', async ($, on) => {
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
-  on('turn.start', (_, e) => ({ turnId: e.turnId }))
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  await $.turn.start({ text: 'hi', turnId: 'e1' })
-  const r: any = await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: '   ' })
-  expect(r.result).toBe('ok')
-})
-
 async function paintedColours($: any, on: any, theme: string) {
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: theme }] }) as any)
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('ui.render', ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)
@@ -267,7 +170,6 @@ test('a dark theme and the auto theme get the dark palette', async ($, on) => {
 
 async function framesOf($: any, on: any) {
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('ui.render', ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)
@@ -304,7 +206,7 @@ test('the gleam bounces: the next sweep starts on the other side', async ($, on)
   await clock.advance(45)
   expect(frames[0].mark).not.toBe(0xffffff) // the first sweep starts at the right end
   for (let i = 0; i < 60; i++) await clock.advance(45) // it finishes
-  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Again' })
+  await ui.redraw({ word: 'Again', message: null, suffix: '…', mode: 'thinking' })
   await clock.advance(45)
   expect(frames[frames.length - 1].mark).toBe(0xffffff) // the second starts at the left, on the mark
   await ui.unmount()
@@ -313,7 +215,6 @@ test('the gleam bounces: the next sweep starts on the other side', async ($, on)
 test('thought for holds for three seconds, then scrambles away', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('ui.render', ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)
@@ -357,47 +258,18 @@ test('thought for holds for three seconds, then scrambles away', async ($, on) =
   await ui.unmount()
 })
 
-test('the status tool row reads "updated verb: ..." collapsed, and is the engine\'s own when expanded, errored or another tool', async ($, on) => {
+test('before a turn the spinner leaves the engine drawing alone', async ($, on) => {
   on('ui.render', ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)
     return <Text>engine</Text>
   })
-  const row = async (tool: string, extra: Record<string, unknown> = {}, input: unknown = { text: 'Winding the timer' }) => {
-    const ui = await $.ui.mount({
-      plugin: 'matrix-spinner', surface: 'terminal', component: 'ToolUse', requestId: 'x' + Math.random(),
-      props: { tool_use_id: 'x', tool, input, isRunning: false, isErrored: false, isInterrupted: false, isExpanded: false, ...extra },
-    })
-    const text = (await ui.find({ type: 'Text' }))?.text
-    await ui.unmount()
-    return text
-  }
-  const status = 'mcp__matrix-spinner__status'
-  expect(await row(status)).toBe('● updated verb: Winding the timer')
-  expect(await row(status, { isRunning: true })).toBe('● updated verb: Winding the timer')
-  expect(await row(status, { isExpanded: true })).toBe('engine')
-  expect(await row(status, { isErrored: true })).toBe('engine')
-  expect(await row(status, {}, { text: '  ' })).toBe('engine')
-  expect(await row('Bash', {}, { command: 'ls' })).toBe('engine')
-})
-
-test('the status tool result is drawn as nothing collapsed, and as the engine draws it expanded', async ($, on) => {
-  on('ui.render', ($: any, e: any) => {
-    const { Text } = $.ui.resolve(e)
-    return <Text>engine</Text>
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'idle',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
   })
-  const result = async (tool: string, isExpanded: boolean) => {
-    const ui = await $.ui.mount({
-      plugin: 'matrix-spinner', surface: 'terminal', component: 'ToolResult', requestId: 'r' + Math.random(),
-      props: { tool_use_id: 'x', tool, output: { result: 'ok' }, isErrored: false, isExpanded },
-    })
-    const text = (await ui.find({ type: 'Text' }))?.text
-    await ui.unmount()
-    return text
-  }
-  const status = 'mcp__matrix-spinner__status'
-  expect(await result(status, false)).toBeUndefined()
-  expect(await result(status, true)).toBe('engine')
-  expect(await result('Bash', false)).toBe('engine')
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
+  expect(await ui.find({ type: 'Raster' })).toBeFalsy()
+  await ui.unmount()
 })
 
 test('the readout clock reads 14s, then 1m 5s', () => {
@@ -407,21 +279,4 @@ test('the readout clock reads 14s, then 1m 5s', () => {
   expect(clockText(60)).toBe('1m 0s')
   expect(clockText(65)).toBe('1m 5s')
   expect(clockText(3599)).toBe('59m 59s')
-})
-
-test('/verbs lists the verbs the model set, in order, and says so when there are none', async ($, on) => {
-  mock.clock(on)
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
-  on('turn.start', (_, e) => ({ turnId: e.turnId }))
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect(((await $.command.run({ command: 'verbs' })) as any).text).toMatch(/No verbs set yet/)
-  await $.turn.start({ text: 'hi', turnId: 'v1' })
-  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Inscribing numerals' })
-  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: '' }) // empty: not a verb, not recorded
-  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Naming the nameless' })
-  const lines = String(((await $.command.run({ command: 'verbs' })) as any).text).split('\n')
-  expect(lines.length).toBe(2)
-  expect(lines[0]).toMatch(/^\d\d:\d\d:\d\d  Inscribing numerals$/)
-  expect(lines[1]).toMatch(/^\d\d:\d\d:\d\d  Naming the nameless$/)
 })

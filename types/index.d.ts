@@ -1,8 +1,3 @@
-export type Shape = { label: string }
-export type Verb = { at: number; text: string }
-
-declare module 'claude-code' {
-  interface PluginState {
-    'matrix-spinner': { shape: Shape | null; verbs: Verb[] }
-  }
-}
+// The verb the model sets is the gerunds plugin's state, key `verb`.
+// This plugin reads that string and declares no state of its own.
+export {}

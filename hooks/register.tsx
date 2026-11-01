@@ -1,7 +1,4 @@
-import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
-
-import type { Shape, Verb } from '../types'
 
 // A port of charmbracelet/mods anim.go at fanciness 10, painted as a Raster
 // and repainted with $.ui.blit so each frame skips a full redraw.
@@ -14,13 +11,11 @@ const GLINT_FRAMES = 1 // frames per character the gleam moves
 const PULSE_FRAMES = 8 // frames the line stays lit, then dark, in the flash
 const CHARS = '0123456789abcdefABCDEF~!@#$£€%^&*()+=_'
 const DEFAULT_LABEL = 'Working'
-const STATUS_TOOL = 'mcp__matrix-spinner__status'
 const MAX_DOTS = 3
 const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
 const THOUGHT_SHOW_MS = 3000 // how long 'thought for' stays after thinking ends
 const THOUGHT_OUT_MS = 900 // then its letters scramble and drop out over this long
-const LONG_THINK_SECONDS = 10 // default of the longThinkSeconds setting
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 56 // room for ' (59m 59s · ↓ 99.9k tokens · thought for 59m 59s)'
 const KEY = 'matrix'
@@ -35,11 +30,6 @@ let TEXT = PALETTES.dark.text // the verb
 let GLEAM = PALETTES.dark.gleam // the gleam and flash over the mark and the scramble
 let TEXT_GLEAM = PALETTES.dark.textGleam // the same over the verb, kept close to TEXT so it only flickers
 let DIM = PALETTES.dark.dim // the readout
-
-const shapeAtom = atom({ plugin: 'matrix-spinner', key: 'shape' } as const, null)
-// Every verb the model sets this session, in order, for /verbs: a compression of the session that can be read back.
-const verbsAtom = atom({ plugin: 'matrix-spinner', key: 'verbs' } as const, [] as Verb[])
-const VERBS_KEPT = 500
 
 const rnd = (n: number) => Math.floor(Math.random() * n)
 const STEPS = 12 // the verb's letters land after up to this many 60 ms steps
@@ -57,8 +47,7 @@ const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
 let secsTimer: { cancel: () => void } | null = null
-let longThinkMs = LONG_THINK_SECONDS * 1000 // a stretch of thinking this long earns the model a nudge to pick a verb; 0 is off
-let owedVerb = false // set after a long think; the next tool result carries a nudge
+let active = false // a turn is running; the spinner draws only then
 let startedAt = 0
 let mainTurn = '' // the turn whose steps are counted; a subagent's are not
 let outTokens = 0 // output tokens of finished steps, as the API reported them
@@ -74,7 +63,6 @@ let tick = 0
 let glintTick = 0 // frames since the gleam last started
 let gleamCount = 0 // sweeps finished this turn; the gleam bounces, so odd ones run left to right
 let sweepDone = false
-let isCustom = false // the model set this turn's word; else the engine's own (spinnerVerbs) shows
 let site = ''
 let columns = 0
 let label = ' ' + DEFAULT_LABEL
@@ -191,7 +179,6 @@ function closeThinking(now: number) {
   if (thinkFrom >= 0) {
     lastThoughtMs = now - thinkFrom
     thoughtUntil = now + THOUGHT_SHOW_MS
-    if (longThinkMs > 0 && lastThoughtMs >= longThinkMs) owedVerb = true
   }
   thinkFrom = -1
   isThinking = false
@@ -287,59 +274,7 @@ function usePalette(isLight: boolean) {
   DIM = p.dim
 }
 
-export const register: Register = (on, options) => {
-  const seconds = Number(options.longThinkSeconds ?? LONG_THINK_SECONDS)
-  longThinkMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
-
-  on('session.start', async ($, e, next) => {
-    await $.tool.register({
-      name: 'status',
-      description:
-        'Set the word shown beside the working spinner: one playful, creative gerund (e.g. "Reticulating", "Discombobulating", "Frolicking", "Enchanting"). Optional and cheap; call it whenever a fresh word fits, no punctuation.',
-      inputSchema: {
-        type: 'object',
-        properties: { text: { type: 'string', maxLength: 48 } },
-        required: ['text'],
-      },
-      isDeferred: false,
-    })
-    await $.command.register({ name: 'verbs', description: 'List the verbs the model set this session, with their times' })
-    return next(e)
-  })
-
-  on('tool.call', { tool: 'mcp__matrix-spinner__status' }, async ($, e: any) => {
-    const text = String(e.text ?? '').trim().slice(0, 48)
-    if (text === '') return { result: 'ok' } // nothing to show: the engine's own verb stays
-    reset(split(text).text, tick * FRAME_MS)
-    restartGleam()
-    isCustom = true
-    const at = await $.clock.now()
-    await update($, verbsAtom, (v: Verb[]): Verb[] => [...v, { at, text }].slice(-VERBS_KEPT))
-    await update($, shapeAtom, (): Shape => ({ label: text }))
-    return { result: 'ok' }
-  })
-
-  on('command.run', { command: 'verbs' }, async $ => {
-    const verbs = await read($, verbsAtom)
-    if (verbs.length === 0) return { text: 'No verbs set yet this session.' }
-    const clock = (ms: number) => new Date(ms).toTimeString().slice(0, 8)
-    return { text: verbs.map(v => `${clock(v.at)}  ${v.text}`).join('\n') }
-  })
-
-  on('tool.call', async ($, e, next) => {
-    if (e.tool === 'mcp__matrix-spinner__status') owedVerb = false
-    const done = await next(e)
-    if (!owedVerb || done.deny !== undefined) return done
-    owedVerb = false
-    return {
-      ...done,
-      context: [
-        ...(done.context ?? []),
-        'You just thought for a long while. Call mcp__matrix-spinner__status once, with one creative, expressive verb or short phrase about what you are doing now, then carry on.',
-      ],
-    }
-  })
-
+export const register: Register = (on) => {
   on('turn.start', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
     stop()
@@ -354,14 +289,12 @@ export const register: Register = (on, options) => {
     tick = 0
     gleamCount = 0
     restartGleam()
-    isCustom = false
+    active = true
     cycle = Array.from({ length: N }, delay)
     reset(DEFAULT_LABEL, 0)
-    await update($, shapeAtom, (): Shape => ({ label: DEFAULT_LABEL }))
     startedAt = await $.clock.now()
     elapsed = 0
     mainTurn = e.turnId
-    owedVerb = false
     outTokens = 0
     stepChars = 0
     lastThoughtMs = 0
@@ -390,21 +323,30 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
     stop()
-    await update($, shapeAtom, () => null)
+    active = false
     return next(e)
   })
 
   on('session.end', async ($, e, next) => {
     stop()
+    active = false
     return next(e)
   })
 
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
-    const shape = await read($, shapeAtom)
-    if (shape === null || e.props.message !== null || e.surface !== 'terminal') return next(e)
+    if (!active || e.props.message !== null || e.surface !== 'terminal') return next(e)
     const { Box, Raster, Text } = $.ui.resolve(e)
-    const parts = split(isCustom ? shape.label : e.props.word)
+    // gerunds owns the verb, under plugin state key `verb` (see that plugin's
+    // types contract). Empty, missing, or gerunds not installed: the engine word.
+    let raw = e.props.word
+    try {
+      const got = await $.state.get({ plugin: 'gerunds', key: 'verb' })
+      if (typeof got.value === 'string' && got.value !== '') raw = got.value
+    } catch {}
+    const parts = split(raw)
     const text = clean(parts.text)
+    // The word changed since the last frame. This is the settle restart: the
+    // status tool used to call reset() and restartGleam() itself.
     if (' ' + text !== label) {
       reset(text, tick * FRAME_MS)
       restartGleam()
@@ -417,25 +359,5 @@ export const register: Register = (on, options) => {
         <Raster key={KEY} columns={columns} rows={1} cells={compose(tick * FRAME_MS, -99, false)} />
       </Box>
     )
-  })
-
-  // The status tool's rows in the transcript, shortened to "updated verb: <the verb>". The verb stays in it, so the
-  // row is still the record of what was chosen; ctrl+o shows the whole call and its result.
-  on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
-    const p = e.props
-    if (p.tool !== STATUS_TOOL || p.isExpanded || p.isErrored || p.isInterrupted) return next(e)
-    const text = String((p.input as { text?: unknown } | undefined)?.text ?? '').trim()
-    if (text === '') return next(e)
-    const { Box, Text } = $.ui.resolve(e)
-    return (
-      <Box paddingTop={1}>
-        <Text>{'● updated verb: ' + text}</Text>
-      </Box>
-    )
-  })
-  on('ui.render', { component: 'ToolResult' }, async ($, e, next) => {
-    if (e.props.tool !== STATUS_TOOL || e.props.isExpanded || e.props.isErrored) return next(e)
-    const { Box } = $.ui.resolve(e)
-    return <Box /> // the result is only "ok": the row above says it all
   })
 }

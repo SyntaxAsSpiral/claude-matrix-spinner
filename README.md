@@ -18,27 +18,23 @@ claude plugin install matrix-spinner --marketplace SyntaxAsSpiral/claude-matrix-
 
 Answer `y` to add the marketplace, then choose a scope.
 
+Version 0.9.0 drops the status tool. The drawing is unchanged, and the mod still runs on its own.
+
 ## What you see
 
-- The verb is the one Claude Code is showing for the turn, until the model sets one.
+- The verb is the one Claude Code is showing for the turn. When the companion plugin gerunds is installed and has set a verb, that word is shown instead, and a new one restarts the scramble and the gleam.
 - The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for three seconds, then its letters scramble into random glyphs and drop away, and the rest of the readout slides left to close the gap.
 - On anything other than the terminal, or while Claude Code is showing a state message, the usual spinner stays.
 
-## The one setting
+## The companion
 
-`longThinkSeconds`, in the `/config` menu, is how long one stretch of thinking must last before the model is asked to set a verb. The default is 10 seconds. `0` turns that off.
+gerunds is a separate plugin. It is not required. It holds the tool `mcp__gerunds__status`, the long-think note, the `updated verb:` rows, and `/gerunds`. This plugin only reads the verb gerunds stores. Without gerunds, none of that is here, and the engine's own verb is what settles.
 
-## The status tool
-
-The mod's own tool is `status`, exposed as `mcp__matrix-spinner__status`. A short text sets the verb for the rest of the turn; empty text leaves it unchanged. The tool's description says the model may call it whenever a fresh word fits, not only after a long think. Nothing in the system prompt asks for the call. After a stretch that reaches `longThinkSeconds`, one tool result carries a note asking the model to call it. The mod answers only its own `status` tool, and never answers or replaces any other tool.
-
-The point is that the model picks the verb itself, from what it is doing at that moment ("Weaving tehtar", "Racing the mod"), so the word is about the work and is not drawn from a fixed list. The text is capped at 48 characters, and a new verb restarts the gleam. A verb lasts only for the turn: the next turn starts again from the engine's own verb, and the mod reads and writes none of Claude Code's verb settings. Each call leaves a row in the transcript, shortened by the mod to `updated verb: <the verb>`, which is the record of the verbs the model chose; ctrl+o shows the whole call.
-
-`/verbs` lists every verb the model set this session, oldest first, each with the time it was set (up to the last 500). Read in order, they are a compression of the session: a chapter title for each stretch of work. The list lives in session state only, so it is gone when the session ends.
+`plugin.json` lists gerunds under `dependencies` with no version, so the type contract is laid down when gerunds is present. That entry does not install gerunds and does not make it required.
 
 ## Privacy
 
-It sends nothing and makes no network requests. Session state holds one label for the turn, cleared when the turn ends, and the list of verbs behind `/verbs`, kept for the session. See [PRIVACY.md](PRIVACY.md).
+It sends nothing and makes no network requests. See [PRIVACY.md](PRIVACY.md).
 
 ## Credit and licence
 
