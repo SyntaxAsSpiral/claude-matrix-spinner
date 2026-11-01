@@ -1,8 +1,8 @@
 # matrix-spinner
 
-A mod for Claude Code that replaces the working spinner with a matrix-style one. Claude Code's own spinner mark leads, then seven scrambling characters, then the verb resolving out of the scramble, then a pulsing ellipsis, then a readout like `(14s · ↓ 801 tokens · thought for 3s)`.
+A mod for Claude Code that replaces the working spinner with a matrix-style one. Claude Code's own spinner mark leads, then six scrambling characters, then the verb resolving out of the scramble, then an ellipsis that cycles, then a readout like `(14s · ↓ 801 tokens · thought for 3s)`.
 
-When a turn starts or the verb changes, a white gleam sweeps right to left across the line, and then the whole line flashes until the next change.
+The verb settles in a wave along its letters, each one a random character until it lands and then lighting up for a moment. When a turn starts or the verb changes, a gleam sweeps across the line, seven characters wide, and then the whole line flashes until the next change. The gleam bounces: each sweep runs the opposite way to the last, starting right to left at the start of every turn.
 
 The effect is a port of the spinner in [charmbracelet/mods](https://github.com/charmbracelet/mods) (`anim.go`, MIT), re-implemented for Claude Code's mod API at its original 22 frames a second. It is drawn as a terminal `Raster` and repainted with `$.ui.blit`, so frames skip a full redraw.
 
@@ -45,7 +45,7 @@ A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. 
 | `textGleam`, over the verb | `#ffffff` | `#383b50` (a lifted near black) |
 | `dim`, the readout | `#908caa` (Rosé Pine subtle) | `#6c6f85` (Latte subtext0) |
 
-Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT_FRAMES` (how fast the gleam moves), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` (how long `thought for` stays).
+Other constants there: `N` (scramble length, 6), `FRAME_MS` (frame time), `GLINT_HALF` and `GLINT_FRAMES` (how wide the gleam is and how fast it moves), `STEPS`, `STEP_MS` and `JITTER` (when the letters land and how wavelike), `SETTLE_FLASH_MS` (how long a landed letter lights up), `DOTS_DELAY_MS` and `DOTS_MS` (the ellipsis), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` (how long `thought for` stays).
 
 Characters the Raster cannot draw are adjusted: full-width forms become single-width, combining marks are dropped, and emoji or other wide characters show as `?`.
 

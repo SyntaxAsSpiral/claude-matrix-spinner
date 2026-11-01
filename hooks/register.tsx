@@ -5,12 +5,13 @@ import type { Shape } from '../types'
 
 // A port of charmbracelet/mods anim.go at fanciness 10, painted as a Raster
 // and repainted with $.ui.blit so each frame skips a full redraw.
-const N = 7
+const N = 6
 const FRAME_MS = 45 // 22 fps, the speed of the original in charmbracelet/mods
-const DOTS_MS = 333
-const GLINT_HALF = 1 // the gleam is 3 characters wide
-const GLINT_FRAMES = 2 // frames per character the gleam moves
-const PULSE_FRAMES = 5 // frames the line stays lit, then dark, in the flash
+const DOTS_MS = 350
+const DOTS_DELAY_MS = 0 // dots start the moment the last letter lands
+const GLINT_HALF = 3 // the gleam is 7 characters wide
+const GLINT_FRAMES = 1 // frames per character the gleam moves
+const PULSE_FRAMES = 8 // frames the line stays lit, then dark, in the flash
 const CHARS = '0123456789abcdefABCDEF~!@#$£€%^&*()+=_'
 const DEFAULT_LABEL = 'Working'
 const MAX_DOTS = 3
@@ -36,7 +37,17 @@ let DIM = PALETTES.dark.dim // the readout
 const shapeAtom = atom({ plugin: 'matrix-spinner', key: 'shape' } as const, null)
 
 const rnd = (n: number) => Math.floor(Math.random() * n)
-const delay = () => rnd(8) * 60
+const STEPS = 12 // the verb's letters land after up to this many 60 ms steps
+const STEP_MS = 60
+const JITTER = 0.05 // how much of the landing time is random rather than a wave
+const SETTLE_FLASH_MS = 100 // a letter lights up for this long as it lands
+const delay = () => rnd(STEPS) * STEP_MS
+// the verb settles in a sine wave along its letters, with a little randomness mixed in
+const waveDelay = (k: number) => (1 - JITTER) * ((Math.sin(k * 0.9) + 1) / 2) * (STEPS - 1) * STEP_MS + JITTER * delay()
+const lerp = (a: number, b: number, t: number) => {
+  const f = (s: number) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * t)
+  return (f(16) << 16) | (f(8) << 8) | f(0)
+}
 const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
@@ -56,6 +67,8 @@ let isThinking = false
 let elapsed = 0 // whole seconds into the turn
 let tick = 0
 let glintTick = 0 // frames since the gleam last started
+let gleamCount = 0 // sweeps finished this turn; the gleam bounces, so odd ones run left to right
+let sweepDone = false
 let isCustom = false // the model set this turn's word; else the engine's own (spinnerVerbs) shows
 let site = ''
 let columns = 0
@@ -100,9 +113,14 @@ function split(raw: string): { glyph: string; text: string } {
 
 function reset(text: string, now: number) {
   label = ' ' + clean(text)
-  delays = [...label].map(delay)
+  delays = [...label].map((_, k) => waveDelay(k))
   labelStart = now
   settledAt = 0
+}
+
+function restartGleam() {
+  glintTick = 0
+  sweepDone = false
 }
 
 function pack(chars: string[], colors: number[]): string {
@@ -130,12 +148,14 @@ function compose(now: number, lit: number, flash: boolean): string {
   text.forEach((c, i) => {
     const isSettled = now >= labelStart + delays[i]
     if (isSettled) settled += 1
-    chars.push(isSettled ? c : '.')
-    colors.push(hit(PREFIX + N + i) || flash ? TEXT_GLEAM : TEXT)
+    chars.push(isSettled ? c : randChar())
+    const landed = now - (labelStart + delays[i])
+    const base = hit(PREFIX + N + i) || flash ? TEXT_GLEAM : TEXT
+    colors.push(isSettled && landed < SETTLE_FLASH_MS ? lerp(base, TEXT_GLEAM, 1 - landed / SETTLE_FLASH_MS) : base)
   })
   if (settled === text.length && settledAt === 0) settledAt = now
-  if (settledAt !== 0 && now - settledAt > 220) {
-    const dots = Math.floor((now - settledAt - 220) / DOTS_MS) % (MAX_DOTS + 1)
+  if (settledAt !== 0 && now - settledAt > DOTS_DELAY_MS) {
+    const dots = Math.floor((now - settledAt - DOTS_DELAY_MS) / DOTS_MS) % (MAX_DOTS + 1)
     for (let k = 0; k < dots; k++) {
       colors[chars.length] = hit(chars.length) || flash ? TEXT_GLEAM : TEXT
       chars.push('.')
@@ -214,7 +234,13 @@ function step($: any) {
   const sweep = (last + 2 * GLINT_HALF + 2) * GLINT_FRAMES
   const phase = glintTick // one pass, then the line flashes until the verb changes or the turn ends
   const inSweep = phase < sweep
-  const lit = inSweep ? last + GLINT_HALF - Math.floor(phase / GLINT_FRAMES) : -99
+  if (!inSweep && !sweepDone) {
+    sweepDone = true
+    gleamCount += 1
+  }
+  const travel = Math.floor(phase / GLINT_FRAMES)
+  const isLeftToRight = gleamCount % 2 === 1 // bounce: each sweep runs against the last
+  const lit = !inSweep ? -99 : isLeftToRight ? -GLINT_HALF - 1 + travel : last + GLINT_HALF - travel
   const flash = !inSweep && Math.floor((phase - sweep) / PULSE_FRAMES) % 2 === 0
   void $.ui.blit({ requestId: site, key: KEY, columns, rows: 1, cells: compose(now, lit, flash) })
 }
@@ -263,7 +289,7 @@ export const register: Register = (on, options) => {
     const text = String(e.text ?? '').trim().slice(0, 48)
     if (text === '') return { result: 'ok' } // nothing to show: the engine's own verb stays
     reset(split(text).text, tick * FRAME_MS)
-    glintTick = 0
+    restartGleam()
     isCustom = true
     await update($, shapeAtom, (): Shape => ({ label: text }))
     return { result: 'ok' }
@@ -295,7 +321,8 @@ export const register: Register = (on, options) => {
     } catch {}
     usePalette(isLight)
     tick = 0
-    glintTick = 0
+    gleamCount = 0
+    restartGleam()
     isCustom = false
     cycle = Array.from({ length: N }, delay)
     reset(DEFAULT_LABEL, 0)
@@ -349,7 +376,7 @@ export const register: Register = (on, options) => {
     const text = clean(parts.text)
     if (' ' + text !== label) {
       reset(text, tick * FRAME_MS)
-      glintTick = 0
+      restartGleam()
     }
     columns = PREFIX + N + 1 + [...text].length + MAX_DOTS + TIMER_W
     site = e.requestId

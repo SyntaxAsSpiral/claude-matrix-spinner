@@ -263,3 +263,48 @@ test('a dark theme and the auto theme get the dark palette', async ($, on) => {
   expect(colours.has(0xc2540a)).toBe(false)
   await ui.unmount()
 })
+
+async function framesOf($: any, on: any) {
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const frames: { chars: string; mark: number }[] = []
+  on('ui.blit', (_: any, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    let chars = ''
+    for (let i = 0; i < w.length; i += 3) chars += String.fromCodePoint(w[i])
+    frames.push({ chars, mark: w[1] })
+    return { value: {} }
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'f1' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'f',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  return { frames, ui }
+}
+
+test('letters that have not landed are scrambled, never dots', async ($, on) => {
+  const clock = mock.clock(on)
+  const { frames, ui } = await framesOf($, on)
+  await clock.advance(45)
+  expect(frames[0].chars.slice(8, 16)).not.toContain('.')
+  await ui.unmount()
+})
+
+test('the gleam bounces: the next sweep starts on the other side', async ($, on) => {
+  const clock = mock.clock(on)
+  const { frames, ui } = await framesOf($, on)
+  await clock.advance(45)
+  expect(frames[0].mark).not.toBe(0xffffff) // the first sweep starts at the right end
+  for (let i = 0; i < 60; i++) await clock.advance(45) // it finishes
+  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Again' })
+  await clock.advance(45)
+  expect(frames[frames.length - 1].mark).toBe(0xffffff) // the second starts at the left, on the mark
+  await ui.unmount()
+})
