@@ -308,3 +308,50 @@ test('the gleam bounces: the next sweep starts on the other side', async ($, on)
   expect(frames[frames.length - 1].mark).toBe(0xffffff) // the second starts at the left, on the mark
   await ui.unmount()
 })
+
+test('thought for holds for three seconds, then scrambles away', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const seen: { chars: string; colours: number[] }[] = []
+  on('ui.blit', (_: any, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    let chars = ''
+    const colours: number[] = []
+    for (let i = 0; i < w.length; i += 3) { chars += String.fromCodePoint(w[i]); colours.push(w[i + 1]) }
+    seen.push({ chars, colours })
+    return { value: {} }
+  })
+  on('turn.step', async function* (_: any, e: any) {
+    yield { kind: 'thinking', index: 0, text: 'x' }
+    await clock.advance(2000)
+    yield { kind: 'text', index: 1, text: 'y' }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 10, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'th' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'th',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  for await (const _ of $.turn.step({ turnId: 'th', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  const start = seen.length
+  await clock.advance(2900)
+  const holding = seen[seen.length - 1]
+  expect(holding.chars).toMatch(/thought for \d+s/)
+  await clock.advance(400) // 3.3 s after thinking ended: the letters are scrambling
+  const scrambling = seen[seen.length - 1]
+  expect(scrambling.chars).not.toMatch(/thought for/)
+  expect(scrambling.chars).toMatch(/tokens/) // the rest of the readout is untouched
+  await clock.advance(1000)
+  const gone = seen[seen.length - 1].chars
+  expect(gone).not.toMatch(/thought/)
+  expect(gone).toMatch(/tokens\)/) // the closing bracket has slid up against it
+  expect(start).toBeGreaterThan(0)
+  await ui.unmount()
+})

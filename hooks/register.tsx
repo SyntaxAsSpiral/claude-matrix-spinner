@@ -17,7 +17,8 @@ const DEFAULT_LABEL = 'Working'
 const MAX_DOTS = 3
 const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
-const THOUGHT_SHOW_MS = 4000 // how long 'thought for' stays after thinking ends
+const THOUGHT_SHOW_MS = 3000 // how long 'thought for' stays after thinking ends
+const THOUGHT_OUT_MS = 900 // then its letters scramble and drop out over this long
 const LONG_THINK_SECONDS = 10 // default of the longThinkSeconds setting
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
@@ -162,10 +163,23 @@ function compose(now: number, lit: number, flash: boolean): string {
     }
   }
   while (chars.length < PREFIX + N + text.length + MAX_DOTS) chars.push(' ')
-  for (const c of readout(now)) {
+  const meta = readout(now)
+  const put = (c: string) => {
     colors[chars.length] = DIM
     chars.push(c)
   }
+  for (const c of meta.head) put(c)
+  // 'thought for' scrambles out: each letter turns to a random glyph, then drops out at its own moment,
+  // and what follows slides left to close the gap
+  ;[...meta.seg].forEach((c, j) => {
+    if (meta.out > 0) {
+      const r = Math.sin((j + 1) * 12.9898 + thoughtUntil * 0.001) * 43758.5453 // a steady pseudo-random per letter
+      const exitAt = 0.4 + 0.6 * (r - Math.floor(r))
+      if (meta.out >= exitAt) return
+      put(c === ' ' ? c : randChar())
+    } else put(c)
+  })
+  for (const c of meta.tail) put(c)
   return pack(chars, colors)
 }
 
@@ -211,16 +225,20 @@ const clockText = (secs: number) =>
 
 const tokenText = (n: number) => (n < 1000 ? String(n) : (n / 1000).toFixed(1) + 'k')
 
-function readout(now: number): string {
+// head and tail are the readout around its 'thought for' segment (seg); out runs 0..1 as the segment scrambles away
+function readout(now: number): { head: string; seg: string; tail: string; out: number } {
   let meta = clockText(elapsed)
   const tokens = outTokens + Math.round(stepChars / 4)
   if (tokens > 0) meta += ' · ↓ ' + tokenText(tokens) + ' tokens'
-  // like the default: 'thinking' while it is under way, then 'thought for 5s' for a few seconds
+  let seg = ''
+  let out = 0
+  // like the default: 'thinking' while it is under way, then 'thought for 5s' for a few seconds, then it scrambles away
   if (isThinking) meta += ' · thinking'
-  else if (now < thoughtUntil && lastThoughtMs >= 1000) {
-    meta += ' · thought for ' + clockText(Math.floor(lastThoughtMs / 1000))
+  else if (now < thoughtUntil + THOUGHT_OUT_MS && lastThoughtMs >= 1000) {
+    seg = ' · thought for ' + clockText(Math.floor(lastThoughtMs / 1000))
+    out = Math.max(0, (now - thoughtUntil) / THOUGHT_OUT_MS)
   }
-  return ' (' + meta + ')'
+  return { head: ' (' + meta, seg, tail: ')', out }
 }
 
 function step($: any) {

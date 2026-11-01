@@ -27,7 +27,7 @@ Answer `y` to add the marketplace, then choose a scope.
 - **The verb** is the engine's own: whichever one Claude Code picks for the turn, from its default verbs or from your `spinnerVerbs`. The mod never reads or changes that setting, and it ships no verbs of its own.
 - **A long think can earn a one-off verb.** If a single stretch of thinking reaches the `longThinkSeconds` setting (10 by default, 0 turns it off), the next tool result carries a hidden note asking the model to call the status tool once with a verb about what it is doing. That verb is shown, and the scramble and the gleam play again, until the turn ends. The next turn starts back on the engine's verb. It fires once per long think, and only where a tool call follows.
 - **Alchemical glyphs.** A verb the model sets that begins with an alchemical symbol (U+1F700 to U+1F77F), such as `🝞 Sublimating`, gets that symbol drawn in front as plain text, since the Raster cannot hold it.
-- **The readout** shows elapsed time (`14s`, then `1:05`), the output tokens of the turn (an estimate while streaming, exact once each step ends), and `thinking`, then `thought for 3s` for a few seconds after thinking ends. Subagents are not counted.
+- **The readout** shows elapsed time (`14s`, then `1:05`), the output tokens of the turn (an estimate while streaming, exact once each step ends), and `thinking`, then `thought for 3s`, which holds for three seconds after thinking ends and then scrambles out, each letter turning to a random glyph and dropping away. Subagents are not counted.
 - **A tool**, `mcp__matrix-spinner__status`, takes a short text. It sets the verb for the rest of the turn and plays the effect again; empty text changes nothing. Nothing in the system prompt asks the model to call it.
 - Terminal only. On other surfaces, or while the engine shows a state message of its own, the usual spinner is drawn.
 
@@ -45,7 +45,7 @@ A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. 
 | `textGleam`, over the verb | `#ffffff` | `#383b50` (a lifted near black) |
 | `dim`, the readout | `#908caa` (Rosé Pine subtle) | `#6c6f85` (Latte subtext0) |
 
-Other constants there: `N` (scramble length, 6), `FRAME_MS` (frame time), `GLINT_HALF` and `GLINT_FRAMES` (how wide the gleam is and how fast it moves), `STEPS`, `STEP_MS` and `JITTER` (when the letters land and how wavelike), `SETTLE_FLASH_MS` (how long a landed letter lights up), `DOTS_DELAY_MS` and `DOTS_MS` (the ellipsis), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` (how long `thought for` stays).
+Other constants there: `N` (scramble length, 6), `FRAME_MS` (frame time), `GLINT_HALF` and `GLINT_FRAMES` (how wide the gleam is and how fast it moves), `STEPS`, `STEP_MS` and `JITTER` (when the letters land and how wavelike), `SETTLE_FLASH_MS` (how long a landed letter lights up), `DOTS_DELAY_MS` and `DOTS_MS` (the ellipsis), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` and `THOUGHT_OUT_MS` (how long `thought for` stays, then how long it takes to scramble out).
 
 Characters the Raster cannot draw are adjusted: full-width forms become single-width, combining marks are dropped, and emoji or other wide characters show as `?`.
 
