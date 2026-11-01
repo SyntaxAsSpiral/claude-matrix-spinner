@@ -21,7 +21,7 @@ Answer `y` to add the marketplace, then choose a scope.
 ## What you see
 
 - The verb is the one Claude Code is showing for the turn, until the model sets one.
-- The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for a short while.
+- The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for three seconds, then its letters scramble into random glyphs and drop away, and the rest of the readout slides left to close the gap.
 - On anything other than the terminal, or while Claude Code is showing a state message, the usual spinner stays.
 
 ## The one setting
@@ -31,6 +31,8 @@ Answer `y` to add the marketplace, then choose a scope.
 ## The status tool
 
 The mod's own tool is `status`, exposed as `mcp__matrix-spinner__status`. A short text sets the verb for the rest of the turn; empty text leaves it unchanged. The tool's description says the model may call it whenever a fresh word fits, not only after a long think. Nothing in the system prompt asks for the call. After a stretch that reaches `longThinkSeconds`, one tool result carries a note asking the model to call it. The mod answers only its own `status` tool, and never answers or replaces any other tool.
+
+The point is that the model picks the verb itself, from what it is doing at that moment ("Weaving tehtar", "Racing the mod"), so the word is about the work and is not drawn from a fixed list. The text is capped at 48 characters, and a new verb restarts the gleam. A verb lasts only for the turn: the next turn starts again from the engine's own verb, and the mod reads and writes none of Claude Code's verb settings. Each call leaves its usual tool row in the transcript, `matrix-spinner - status (MCP)`, which is the record of the verbs the model chose. The mod leaves that row as it is.
 
 ## Privacy
 
