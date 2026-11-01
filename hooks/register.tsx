@@ -20,12 +20,17 @@ const THOUGHT_SHOW_MS = 4000 // how long 'thought for' stays after thinking ends
 const LONG_THINK_SECONDS = 10 // default of the longThinkSeconds setting
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
-const DIM = 0x908caa // Rose Pine subtle
 const KEY = 'matrix'
-const ORANGE = 0xf6c177 // Rose Pine gold, the closest it has to orange
 const DEFAULT = 0x01000000 // the terminal's own foreground
-const TEXT = 0xf5e0dc // Catppuccin Mocha rosewater, the message's colour
-const GLEAM = 0xffffff // one gleam and flash colour
+// RGB is fixed, so a light terminal needs its own set: darker, with a coloured gleam, since white would vanish
+const PALETTES = {
+  dark: { orange: 0xf6c177, text: 0xf5e0dc, gleam: 0xffffff, dim: 0x908caa }, // Rose Pine gold, Mocha rosewater, white, Rose Pine subtle
+  light: { orange: 0xea9d34, text: 0x4c4f69, gleam: 0x8839ef, dim: 0x797593 }, // Rose Pine Dawn gold, Latte text, Latte mauve, Dawn subtle
+}
+let ORANGE = PALETTES.dark.orange // the mark and the scramble
+let TEXT = PALETTES.dark.text // the verb
+let GLEAM = PALETTES.dark.gleam // one gleam and flash colour
+let DIM = PALETTES.dark.dim // the readout
 
 const shapeAtom = atom({ plugin: 'matrix-spinner', key: 'shape' } as const, null)
 
@@ -35,6 +40,7 @@ const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
 let secsTimer: { cancel: () => void } | null = null
+let paletteSetting = 'auto'
 let longThinkMs = LONG_THINK_SECONDS * 1000 // a stretch of thinking this long earns the model a nudge to pick a verb; 0 is off
 let owedVerb = false // set after a long think; the next tool result carries a nudge
 let startedAt = 0
@@ -225,7 +231,16 @@ function stop() {
   site = ''
 }
 
+function usePalette(isLight: boolean) {
+  const p = isLight ? PALETTES.light : PALETTES.dark
+  ORANGE = p.orange
+  TEXT = p.text
+  GLEAM = p.gleam
+  DIM = p.dim
+}
+
 export const register: Register = (on, options) => {
+  paletteSetting = String(options.palette ?? 'auto')
   const seconds = Number(options.longThinkSeconds ?? LONG_THINK_SECONDS)
   longThinkMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
 
@@ -271,6 +286,15 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
     stop()
+    let isLight = paletteSetting === 'light'
+    if (paletteSetting === 'auto') {
+      // read-only: follow Claude Code's own theme when it says light, else dark
+      try {
+        const row = (await $.config.list()).find(r => r.key === 'theme')
+        isLight = /light/i.test(String(row?.value ?? ''))
+      } catch {}
+    }
+    usePalette(isLight)
     tick = 0
     glintTick = 0
     isCustom = false

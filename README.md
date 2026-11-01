@@ -31,15 +31,18 @@ Answer `y` to add the marketplace, then choose a scope.
 - **A tool**, `mcp__matrix-spinner__status`, takes a short text. It sets the verb for the rest of the turn and plays the effect again; empty text changes nothing. Nothing in the system prompt asks the model to call it.
 - Terminal only. On other surfaces, or while the engine shows a state message of its own, the usual spinner is drawn.
 
-Its one setting, `longThinkSeconds`, is in the `/config` menu. The mod sends nothing anywhere.
+Its two settings, `longThinkSeconds` and `palette`, are in the `/config` menu. The mod sends nothing anywhere.
 
 ## Colours and knobs
 
-A `Raster` takes plain RGB, so the colours are fixed and do not follow your theme. They are constants at the top of `hooks/register.tsx`:
+A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. There are two fixed sets, picked by the `palette` setting: `dark`, `light`, or `auto` (the default), which uses the light set when Claude Code's own theme is a light one and dark otherwise. On a light terminal the gleam is Latte mauve rather than white, which would disappear. The sets are `PALETTES` at the top of `hooks/register.tsx`:
 
-- `ORANGE`: the mark and the scramble, `#f6c177` (Rosé Pine gold).
-- `TEXT`: the verb, `#f5e0dc` (Catppuccin Mocha rosewater).
-- `GLEAM`: the gleam and the flash, `#ffffff`.
+| | dark | light |
+|---|---|---|
+| `orange`, the mark and the scramble | `#f6c177` (Rosé Pine gold) | `#ea9d34` (Rosé Pine Dawn gold) |
+| `text`, the verb | `#f5e0dc` (Mocha rosewater) | `#4c4f69` (Latte text) |
+| `gleam`, the gleam and the flash | `#ffffff` | `#8839ef` (Latte mauve) |
+| `dim`, the readout | `#908caa` (Rosé Pine subtle) | `#797593` (Rosé Pine Dawn subtle) |
 
 Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT_FRAMES` (how fast the gleam moves), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` (how long `thought for` stays).
 

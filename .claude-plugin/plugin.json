@@ -1,6 +1,6 @@
 {
   "name": "matrix-spinner",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A matrix-style scrambling spinner for Claude Code with a gleam, a live readout and an ephemeral verb the model can set after a long think, ported from the spinner in charmbracelet/mods.",
   "author": {
     "name": "SyntaxAsSpiral"
@@ -22,6 +22,17 @@
       "default": 10,
       "min": 0,
       "max": 600
+    },
+    "palette": {
+      "type": "string",
+      "title": "Palette",
+      "description": "Colours for a dark or a light terminal. auto follows Claude Code's own theme (read only) and uses dark when it cannot tell.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "dark",
+        "light"
+      ]
     }
   }
 }

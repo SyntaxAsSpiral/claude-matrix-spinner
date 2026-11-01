@@ -217,3 +217,47 @@ test('an empty verb from the tool leaves the engine verb alone', async ($, on) =
   const r: any = await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: '   ' })
   expect(r.result).toBe('ok')
 })
+
+async function paintedColours($: any, on: any) {
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const colours = new Set<number>()
+  on('ui.blit', (_: any, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    for (let i = 1; i < w.length; i += 3) colours.add(w[i])
+    return { value: {} }
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'p1' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'p',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  return { colours, ui }
+}
+
+test('the light palette has no white gleam and no dark-mode gold', { options: { palette: 'light' } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const { colours, ui } = await paintedColours($, on)
+  for (let i = 0; i < 40; i++) await clock.advance(45)
+  expect(colours.has(0xea9d34)).toBe(true)
+  expect(colours.has(0x8839ef)).toBe(true)
+  expect(colours.has(0xffffff)).toBe(false)
+  expect(colours.has(0xf6c177)).toBe(false)
+  await ui.unmount()
+})
+
+test('the dark palette is the default', async ($, on) => {
+  const clock = mock.clock(on)
+  const { colours, ui } = await paintedColours($, on)
+  for (let i = 0; i < 40; i++) await clock.advance(45)
+  expect(colours.has(0xf6c177)).toBe(true)
+  expect(colours.has(0xffffff)).toBe(true)
+  expect(colours.has(0xea9d34)).toBe(false)
+  await ui.unmount()
+})
