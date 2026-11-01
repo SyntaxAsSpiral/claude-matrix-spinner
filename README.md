@@ -28,7 +28,7 @@ Answer `y` to add the marketplace, then choose a scope.
 - **A long think can earn a one-off verb.** If a single stretch of thinking reaches the `longThinkSeconds` setting (10 by default, 0 turns it off), the next tool result carries a hidden note asking the model to call the status tool once with a verb about what it is doing. That verb is shown, and the scramble and the gleam play again, until the turn ends. The next turn starts back on the engine's verb. It fires once per long think, and only where a tool call follows.
 - **Alchemical glyphs.** A verb the model sets that begins with an alchemical symbol (U+1F700 to U+1F77F), such as `🝞 Sublimating`, gets that symbol drawn in front as plain text, since the Raster cannot hold it.
 - **The readout** shows elapsed time (`14s`, then `1:05`), the output tokens of the turn (an estimate while streaming, exact once each step ends), and `thinking`, then `thought for 3s`, which holds for three seconds after thinking ends and then scrambles out, each letter turning to a random glyph and dropping away. Subagents are not counted.
-- **A tool**, `mcp__matrix-spinner__status`, takes a short text. It sets the verb for the rest of the turn and plays the effect again; empty text changes nothing. Nothing in the system prompt asks the model to call it.
+- **A tool**, `mcp__matrix-spinner__status`, is the mod's own `status` tool. It takes a short text, sets the verb for the rest of the turn and plays the effect again; empty text changes nothing. The tool's own description tells the model it may call it whenever a fresh word fits, not only after a long think. Nothing in the system prompt asks the model to call it. The mod answers only its own `status` tool, exposed as `mcp__matrix-spinner__status`, and never answers or replaces any other tool. Other tools' results pass through `next()`, with only the long-think context note added.
 - Terminal only. On other surfaces, or while the engine shows a state message of its own, the usual spinner is drawn.
 
 Its one setting, `longThinkSeconds`, is in the `/config` menu. The mod sends nothing anywhere.
@@ -51,7 +51,7 @@ Characters the Raster cannot draw are adjusted: full-width forms become single-w
 
 ## Privacy and what runs
 
-The mod collects, stores and sends nothing, makes no network requests, and runs no code beyond `hooks/register.tsx`, which `hooks/hooks.json` declares as a hooks module. It declares no MCP servers. See [PRIVACY.md](PRIVACY.md) for the details.
+The mod collects and sends nothing. The only thing it stores is the current verb, kept in session state for the turn and cleared when the turn ends. It makes no network requests, and runs no code beyond `hooks/register.tsx`, which `hooks/hooks.json` declares as a hooks module. It declares no MCP servers. See [PRIVACY.md](PRIVACY.md) for the details.
 
 ## Credit and licence
 
