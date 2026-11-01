@@ -355,3 +355,46 @@ test('thought for holds for three seconds, then scrambles away', async ($, on) =
   expect(start).toBeGreaterThan(0)
   await ui.unmount()
 })
+
+test('the status tool row reads "updated verb: ..." collapsed, and is the engine\'s own when expanded, errored or another tool', async ($, on) => {
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const row = async (tool: string, extra: Record<string, unknown> = {}, input: unknown = { text: 'Winding the timer' }) => {
+    const ui = await $.ui.mount({
+      plugin: 'matrix-spinner', surface: 'terminal', component: 'ToolUse', requestId: 'x' + Math.random(),
+      props: { tool_use_id: 'x', tool, input, isRunning: false, isErrored: false, isInterrupted: false, isExpanded: false, ...extra },
+    })
+    const text = (await ui.find({ type: 'Text' }))?.text
+    await ui.unmount()
+    return text
+  }
+  const status = 'mcp__matrix-spinner__status'
+  expect(await row(status)).toBe('● updated verb: Winding the timer')
+  expect(await row(status, { isRunning: true })).toBe('● updated verb: Winding the timer')
+  expect(await row(status, { isExpanded: true })).toBe('engine')
+  expect(await row(status, { isErrored: true })).toBe('engine')
+  expect(await row(status, {}, { text: '  ' })).toBe('engine')
+  expect(await row('Bash', {}, { command: 'ls' })).toBe('engine')
+})
+
+test('the status tool result is drawn as nothing collapsed, and as the engine draws it expanded', async ($, on) => {
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const result = async (tool: string, isExpanded: boolean) => {
+    const ui = await $.ui.mount({
+      plugin: 'matrix-spinner', surface: 'terminal', component: 'ToolResult', requestId: 'r' + Math.random(),
+      props: { tool_use_id: 'x', tool, output: { result: 'ok' }, isErrored: false, isExpanded },
+    })
+    const text = (await ui.find({ type: 'Text' }))?.text
+    await ui.unmount()
+    return text
+  }
+  const status = 'mcp__matrix-spinner__status'
+  expect(await result(status, false)).toBeUndefined()
+  expect(await result(status, true)).toBe('engine')
+  expect(await result('Bash', false)).toBe('engine')
+})

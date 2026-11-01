@@ -14,6 +14,7 @@ const GLINT_FRAMES = 1 // frames per character the gleam moves
 const PULSE_FRAMES = 8 // frames the line stays lit, then dark, in the flash
 const CHARS = '0123456789abcdefABCDEF~!@#$£€%^&*()+=_'
 const DEFAULT_LABEL = 'Working'
+const STATUS_TOOL = 'mcp__matrix-spinner__status'
 const MAX_DOTS = 3
 const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
@@ -404,5 +405,21 @@ export const register: Register = (on, options) => {
         <Raster key={KEY} columns={columns} rows={1} cells={compose(tick * FRAME_MS, -99, false)} />
       </Box>
     )
+  })
+
+  // The status tool's rows in the transcript, shortened to "updated verb: <the verb>". The verb stays in it, so the
+  // row is still the record of what was chosen; ctrl+o shows the whole call and its result.
+  on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
+    const p = e.props
+    if (p.tool !== STATUS_TOOL || p.isExpanded || p.isErrored || p.isInterrupted) return next(e)
+    const text = String((p.input as { text?: unknown } | undefined)?.text ?? '').trim()
+    if (text === '') return next(e)
+    const { Text } = $.ui.resolve(e)
+    return <Text>{'● updated verb: ' + text}</Text>
+  })
+  on('ui.render', { component: 'ToolResult' }, async ($, e, next) => {
+    if (e.props.tool !== STATUS_TOOL || e.props.isExpanded || e.props.isErrored) return next(e)
+    const { Box } = $.ui.resolve(e)
+    return <Box /> // the result is only "ok": the row above says it all
   })
 }
