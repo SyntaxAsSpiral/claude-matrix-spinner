@@ -24,12 +24,13 @@ const KEY = 'matrix'
 const DEFAULT = 0x01000000 // the terminal's own foreground
 // RGB is fixed, so a light terminal needs its own set: darker, with a deep gleam, since white would vanish
 const PALETTES = {
-  dark: { orange: 0xf6c177, text: 0xf5e0dc, gleam: 0xffffff, dim: 0x908caa }, // Rose Pine gold, Mocha rosewater, white, Rose Pine subtle
-  light: { orange: 0xc2540a, text: 0x1c1c24, gleam: 0x1e2030, dim: 0x6c6f85 }, // burnt orange, near black, Macchiato mantle, Latte subtext0
+  dark: { orange: 0xf6c177, text: 0xf5e0dc, gleam: 0xffffff, textGleam: 0xffffff, dim: 0x908caa }, // Rose Pine gold, Mocha rosewater, white, Rose Pine subtle
+  light: { orange: 0xc2540a, text: 0x1c1c24, gleam: 0x1e2030, textGleam: 0x383b50, dim: 0x6c6f85 }, // burnt orange, near black, Macchiato mantle (the mark and scramble), a lifted near black (the verb, a quiet flicker like dark's), Latte subtext0
 }
 let ORANGE = PALETTES.dark.orange // the mark and the scramble
 let TEXT = PALETTES.dark.text // the verb
-let GLEAM = PALETTES.dark.gleam // one gleam and flash colour
+let GLEAM = PALETTES.dark.gleam // the gleam and flash over the mark and the scramble
+let TEXT_GLEAM = PALETTES.dark.textGleam // the same over the verb, kept close to TEXT so it only flickers
 let DIM = PALETTES.dark.dim // the readout
 
 const shapeAtom = atom({ plugin: 'matrix-spinner', key: 'shape' } as const, null)
@@ -130,13 +131,13 @@ function compose(now: number, lit: number, flash: boolean): string {
     const isSettled = now >= labelStart + delays[i]
     if (isSettled) settled += 1
     chars.push(isSettled ? c : '.')
-    colors.push(hit(PREFIX + N + i) || flash ? GLEAM : TEXT)
+    colors.push(hit(PREFIX + N + i) || flash ? TEXT_GLEAM : TEXT)
   })
   if (settled === text.length && settledAt === 0) settledAt = now
   if (settledAt !== 0 && now - settledAt > 220) {
     const dots = Math.floor((now - settledAt - 220) / DOTS_MS) % (MAX_DOTS + 1)
     for (let k = 0; k < dots; k++) {
-      colors[chars.length] = hit(chars.length) || flash ? GLEAM : TEXT
+      colors[chars.length] = hit(chars.length) || flash ? TEXT_GLEAM : TEXT
       chars.push('.')
     }
   }
@@ -235,6 +236,7 @@ function usePalette(isLight: boolean) {
   ORANGE = p.orange
   TEXT = p.text
   GLEAM = p.gleam
+  TEXT_GLEAM = p.textGleam
   DIM = p.dim
 }
 
