@@ -4,22 +4,25 @@ import { expect, mock, test } from 'claude-code/testing'
 // this file is a free variable there, and the hook is skipped. Every name
 // below is a literal for that reason.
 
-// The writer is the gerunds contract: plugin state key `verb`, set with
-// $.state.set({ plugin: 'gerunds', key: 'verb' }, text). Seated at user tier,
-// inside the spinner, which is the seat where a word-prop rewrite never runs.
-function gerunds(on: any) {
-  on('tool.call', { tool: 'mcp__gerunds__status' }, async ($: any, e: any) => {
-    const text = String(e.text ?? '').trim()
-    if (text === '') return { result: 'ok' }
-    await $.state.set({ plugin: 'gerunds', key: 'verb' }, text)
+// A stand-in rewriter, seated outside this plugin. It is not a companion mod.
+// It rewrites the Spinner word and wakes a redraw. This plugin only draws.
+function rewriter(on: any) {
+  let word = ''
+  on('tool.call', { tool: 'mcp__rewriter__status' }, ($: any, e: any) => {
+    word = String(e.text ?? '').trim()
+    if (word === '') return { result: 'ok' }
     $.ui.invalidate('ui.render')
     return { result: 'ok' }
+  })
+  on('ui.render', { component: 'Spinner' }, (_$: any, e: any, next: any) => {
+    if (e.props.message !== null || word === '') return next(e)
+    return next({ ...e, props: { ...e.props, word } })
   })
 }
 
 const WORD = { message: null, suffix: '…', mode: 'thinking' as const }
 
-test('with gerunds absent the spinner settles the engine word', async ($, on) => {
+test('alone, the spinner settles the engine word', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
@@ -47,8 +50,8 @@ test('with gerunds absent the spinner settles the engine word', async ($, on) =>
   await ui.unmount()
 })
 
-test('a user-tier gerunds writer sets the verb and restarts the scramble and the gleam', {
-  plugins: [{ name: 'gerunds', tier: 'user', register: gerunds }],
+test("an outer rewriter's word restarts the scramble and the gleam", {
+  plugins: [{ name: 'rewriter', tier: 'prepend', register: rewriter }],
 }, async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
@@ -75,7 +78,7 @@ test('a user-tier gerunds writer sets the verb and restarts the scramble and the
   })
   for (let i = 0; i < 60; i++) await clock.advance(45)
   expect(frames[frames.length - 1].chars).toContain('Working')
-  await $.tool.call({ tool: 'mcp__gerunds__status', text: 'Frolicking' })
+  await $.tool.call({ tool: 'mcp__rewriter__status', text: 'Frolicking' })
   await clock.advance(45)
   const fresh = frames[frames.length - 1]
   expect(fresh.chars).not.toContain('Working')

@@ -22,15 +22,11 @@ Version 0.9.0 drops the status tool. The drawing is unchanged, and the mod still
 
 ## What you see
 
-- The verb is the one Claude Code is showing for the turn. When the companion plugin gerunds is installed and has set a verb, that word is shown instead, and a new one restarts the scramble and the gleam.
+- The verb is the word the render chain gives this plugin. A new word restarts the scramble and the gleam.
 - The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for three seconds, then its letters scramble into random glyphs and drop away, and the rest of the readout slides left to close the gap.
 - On anything other than the terminal, or while Claude Code is showing a state message, the usual spinner stays.
 
-## The companion
-
-gerunds is a separate plugin. It is not required. It holds the tool `mcp__gerunds__status`, the long-think note, the `updated verb:` rows, and `/gerunds`. This plugin only reads the verb gerunds stores. Without gerunds, none of that is here, and the engine's own verb is what settles.
-
-`plugin.json` lists gerunds under `dependencies` with no version, so the type contract is laid down when gerunds is present. That entry does not install gerunds and does not make it required.
+Another mod may rewrite that word before this one draws it; gerunds is one such mod, and this plugin does not read it or depend on it.
 
 ## Privacy
 

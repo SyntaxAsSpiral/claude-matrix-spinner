@@ -336,17 +336,9 @@ export const register: Register = (on) => {
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
     if (!active || e.props.message !== null || e.surface !== 'terminal') return next(e)
     const { Box, Raster, Text } = $.ui.resolve(e)
-    // gerunds owns the verb, under plugin state key `verb` (see that plugin's
-    // types contract). Empty, missing, or gerunds not installed: the engine word.
-    let raw = e.props.word
-    try {
-      const got = await $.state.get({ plugin: 'gerunds', key: 'verb' })
-      if (typeof got.value === 'string' && got.value !== '') raw = got.value
-    } catch {}
-    const parts = split(raw)
+    // The word is whatever the chain passed in. A new one restarts the settle.
+    const parts = split(e.props.word)
     const text = clean(parts.text)
-    // The word changed since the last frame. This is the settle restart: the
-    // status tool used to call reset() and restartGleam() itself.
     if (' ' + text !== label) {
       reset(text, tick * FRAME_MS)
       restartGleam()
