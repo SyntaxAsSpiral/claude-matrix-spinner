@@ -34,9 +34,11 @@ The mod's own tool is `status`, exposed as `mcp__matrix-spinner__status`. A shor
 
 The point is that the model picks the verb itself, from what it is doing at that moment ("Weaving tehtar", "Racing the mod"), so the word is about the work and is not drawn from a fixed list. The text is capped at 48 characters, and a new verb restarts the gleam. A verb lasts only for the turn: the next turn starts again from the engine's own verb, and the mod reads and writes none of Claude Code's verb settings. Each call leaves a row in the transcript, shortened by the mod to `updated verb: <the verb>`, which is the record of the verbs the model chose; ctrl+o shows the whole call.
 
+`/verbs` lists every verb the model set this session, oldest first, each with the time it was set (up to the last 500). Read in order, they are a compression of the session: a chapter title for each stretch of work. The list lives in session state only, so it is gone when the session ends.
+
 ## Privacy
 
-It sends nothing and makes no network requests. Session state holds one label for the turn, cleared when the turn ends. See [PRIVACY.md](PRIVACY.md).
+It sends nothing and makes no network requests. Session state holds one label for the turn, cleared when the turn ends, and the list of verbs behind `/verbs`, kept for the session. See [PRIVACY.md](PRIVACY.md).
 
 ## Credit and licence
 

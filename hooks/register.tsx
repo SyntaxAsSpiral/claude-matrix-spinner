@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Shape } from '../types'
+import type { Shape, Verb } from '../types'
 
 // A port of charmbracelet/mods anim.go at fanciness 10, painted as a Raster
 // and repainted with $.ui.blit so each frame skips a full redraw.
@@ -37,6 +37,9 @@ let TEXT_GLEAM = PALETTES.dark.textGleam // the same over the verb, kept close t
 let DIM = PALETTES.dark.dim // the readout
 
 const shapeAtom = atom({ plugin: 'matrix-spinner', key: 'shape' } as const, null)
+// Every verb the model sets this session, in order, for /verbs: a compression of the session that can be read back.
+const verbsAtom = atom({ plugin: 'matrix-spinner', key: 'verbs' } as const, [] as Verb[])
+const VERBS_KEPT = 500
 
 const rnd = (n: number) => Math.floor(Math.random() * n)
 const STEPS = 12 // the verb's letters land after up to this many 60 ms steps
@@ -300,6 +303,7 @@ export const register: Register = (on, options) => {
       },
       isDeferred: false,
     })
+    await $.command.register({ name: 'verbs', description: 'List the verbs the model set this session, with their times' })
     return next(e)
   })
 
@@ -309,8 +313,17 @@ export const register: Register = (on, options) => {
     reset(split(text).text, tick * FRAME_MS)
     restartGleam()
     isCustom = true
+    const at = await $.clock.now()
+    await update($, verbsAtom, (v: Verb[]): Verb[] => [...v, { at, text }].slice(-VERBS_KEPT))
     await update($, shapeAtom, (): Shape => ({ label: text }))
     return { result: 'ok' }
+  })
+
+  on('command.run', { command: 'verbs' }, async $ => {
+    const verbs = await read($, verbsAtom)
+    if (verbs.length === 0) return { text: 'No verbs set yet this session.' }
+    const clock = (ms: number) => new Date(ms).toTimeString().slice(0, 8)
+    return { text: verbs.map(v => `${clock(v.at)}  ${v.text}`).join('\n') }
   })
 
   on('tool.call', async ($, e, next) => {

@@ -408,3 +408,20 @@ test('the readout clock reads 14s, then 1m 5s', () => {
   expect(clockText(65)).toBe('1m 5s')
   expect(clockText(3599)).toBe('59m 59s')
 })
+
+test('/verbs lists the verbs the model set, in order, and says so when there are none', async ($, on) => {
+  mock.clock(on)
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  expect(((await $.command.run({ command: 'verbs' })) as any).text).toMatch(/No verbs set yet/)
+  await $.turn.start({ text: 'hi', turnId: 'v1' })
+  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Inscribing numerals' })
+  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: '' }) // empty: not a verb, not recorded
+  await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: 'Naming the nameless' })
+  const lines = String(((await $.command.run({ command: 'verbs' })) as any).text).split('\n')
+  expect(lines.length).toBe(2)
+  expect(lines[0]).toMatch(/^\d\d:\d\d:\d\d  Inscribing numerals$/)
+  expect(lines[1]).toMatch(/^\d\d:\d\d:\d\d  Naming the nameless$/)
+})
