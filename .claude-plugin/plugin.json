@@ -22,17 +22,6 @@
       "default": 10,
       "min": 0,
       "max": 600
-    },
-    "palette": {
-      "type": "string",
-      "title": "Palette",
-      "description": "Colours for a dark or a light terminal. auto follows Claude Code's own theme (read only) and uses dark when it cannot tell.",
-      "default": "auto",
-      "options": [
-        "auto",
-        "dark",
-        "light"
-      ]
     }
   }
 }

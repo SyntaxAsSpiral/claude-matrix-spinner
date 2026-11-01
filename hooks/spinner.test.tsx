@@ -218,7 +218,8 @@ test('an empty verb from the tool leaves the engine verb alone', async ($, on) =
   expect(r.result).toBe('ok')
 })
 
-async function paintedColours($: any, on: any) {
+async function paintedColours($: any, on: any, theme: string) {
+  on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: theme }] }) as any)
   on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
   on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
@@ -241,9 +242,9 @@ async function paintedColours($: any, on: any) {
   return { colours, ui }
 }
 
-test('the light palette has no white gleam and no dark-mode gold', { options: { palette: 'light' } }, async ($, on) => {
+test('a light Claude Code theme gets the light palette', async ($, on) => {
   const clock = mock.clock(on)
-  const { colours, ui } = await paintedColours($, on)
+  const { colours, ui } = await paintedColours($, on, 'light-daltonized')
   for (let i = 0; i < 40; i++) await clock.advance(45)
   expect(colours.has(0xea9d34)).toBe(true)
   expect(colours.has(0x8839ef)).toBe(true)
@@ -252,9 +253,9 @@ test('the light palette has no white gleam and no dark-mode gold', { options: { 
   await ui.unmount()
 })
 
-test('the dark palette is the default', async ($, on) => {
+test('a dark theme and the auto theme get the dark palette', async ($, on) => {
   const clock = mock.clock(on)
-  const { colours, ui } = await paintedColours($, on)
+  const { colours, ui } = await paintedColours($, on, 'auto')
   for (let i = 0; i < 40; i++) await clock.advance(45)
   expect(colours.has(0xf6c177)).toBe(true)
   expect(colours.has(0xffffff)).toBe(true)

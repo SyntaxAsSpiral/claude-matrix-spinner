@@ -40,7 +40,6 @@ const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
 let secsTimer: { cancel: () => void } | null = null
-let paletteSetting = 'auto'
 let longThinkMs = LONG_THINK_SECONDS * 1000 // a stretch of thinking this long earns the model a nudge to pick a verb; 0 is off
 let owedVerb = false // set after a long think; the next tool result carries a nudge
 let startedAt = 0
@@ -240,7 +239,6 @@ function usePalette(isLight: boolean) {
 }
 
 export const register: Register = (on, options) => {
-  paletteSetting = String(options.palette ?? 'auto')
   const seconds = Number(options.longThinkSeconds ?? LONG_THINK_SECONDS)
   longThinkMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
 
@@ -286,14 +284,13 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
     stop()
-    let isLight = paletteSetting === 'light'
-    if (paletteSetting === 'auto') {
-      // read-only: follow Claude Code's own theme when it says light, else dark
-      try {
-        const row = (await $.config.list()).find(r => r.key === 'theme')
-        isLight = /light/i.test(String(row?.value ?? ''))
-      } catch {}
-    }
+    // Claude Code's own theme picks the colours, read once a turn and never written; the
+    // terminal is not looked at, so the 'auto' theme and anything unreadable count as dark
+    let isLight = false
+    try {
+      const row = (await $.config.list()).find(r => r.key === 'theme')
+      isLight = /light/i.test(String(row?.value ?? ''))
+    } catch {}
     usePalette(isLight)
     tick = 0
     glintTick = 0

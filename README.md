@@ -31,11 +31,11 @@ Answer `y` to add the marketplace, then choose a scope.
 - **A tool**, `mcp__matrix-spinner__status`, takes a short text. It sets the verb for the rest of the turn and plays the effect again; empty text changes nothing. Nothing in the system prompt asks the model to call it.
 - Terminal only. On other surfaces, or while the engine shows a state message of its own, the usual spinner is drawn.
 
-Its two settings, `longThinkSeconds` and `palette`, are in the `/config` menu. The mod sends nothing anywhere.
+Its one setting, `longThinkSeconds`, is in the `/config` menu. The mod sends nothing anywhere.
 
 ## Colours and knobs
 
-A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. There are two fixed sets, picked by the `palette` setting: `dark`, `light`, or `auto` (the default), which uses the light set when Claude Code's own theme is a light one and dark otherwise. On a light terminal the gleam is Latte mauve rather than white, which would disappear. The sets are `PALETTES` at the top of `hooks/register.tsx`:
+A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. There are two fixed sets, and Claude Code's selected theme picks between them at the start of each turn: any light theme (`light`, `light-daltonized`, `light-ansi`) gets the light set, anything else gets the dark one. The mod does not look at the terminal, so the `auto` theme, which Claude Code matches to the terminal itself, counts as dark. On a light theme the gleam is Latte mauve rather than white, which would disappear. The sets are `PALETTES` at the top of `hooks/register.tsx`:
 
 | | dark | light |
 |---|---|---|

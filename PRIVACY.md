@@ -6,7 +6,7 @@ matrix-spinner does not collect, store or send any data about you.
 - The only thing it keeps is a verb the model set this turn, as text in the session's own state, cleared when the turn ends. It is not written to a file and does not leave the session.
 - It makes no network requests.
 - It writes and reads no files, and starts no processes.
-- It reads two settings of its own, `longThinkSeconds` and `palette`, and with `palette` on `auto` it reads one more value, Claude Code's `theme`, only to pick light or dark colours. It writes no setting. It reads no credentials, nothing else (not `spinnerVerbs`) and no environment variables.
+- It reads one setting of its own, `longThinkSeconds`, and Claude Code's `theme`, once a turn, only to pick light or dark colours. It writes no setting. It reads no credentials, nothing else (not `spinnerVerbs`) and no environment variables.
 - It has no analytics or telemetry.
 
 ## What code runs
