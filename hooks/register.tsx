@@ -22,7 +22,7 @@ const THOUGHT_SHOW_MS = 3000 // how long 'thought for' stays after thinking ends
 const THOUGHT_OUT_MS = 900 // then its letters scramble and drop out over this long
 const LONG_THINK_SECONDS = 10 // default of the longThinkSeconds setting
 const MARK_FRAMES = 4 // frames per step of the mark
-const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
+const TIMER_W = 56 // room for ' (59m 59s · ↓ 99.9k tokens · thought for 59m 59s)'
 const KEY = 'matrix'
 const DEFAULT = 0x01000000 // the terminal's own foreground
 // RGB is fixed, so a light terminal needs its own set: darker, with a deep gleam, since white would vanish
@@ -221,8 +221,7 @@ function endStep(tokens: number | undefined) {
   stepChars = 0
 }
 
-const clockText = (secs: number) =>
-  secs < 60 ? secs + 's' : Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0')
+export const clockText = (secs: number) => (secs < 60 ? secs + 's' : Math.floor(secs / 60) + 'm ' + (secs % 60) + 's')
 
 const tokenText = (n: number) => (n < 1000 ? String(n) : (n / 1000).toFixed(1) + 'k')
 

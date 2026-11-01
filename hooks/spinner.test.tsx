@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
+import { clockText } from './register'
 
 test('the spinner paints a Raster and blits frames', async ($, on) => {
   const clock = mock.clock(on)
@@ -397,4 +398,13 @@ test('the status tool result is drawn as nothing collapsed, and as the engine dr
   expect(await result(status, false)).toBeUndefined()
   expect(await result(status, true)).toBe('engine')
   expect(await result('Bash', false)).toBe('engine')
+})
+
+test('the readout clock reads 14s, then 1m 5s', () => {
+  expect(clockText(0)).toBe('0s')
+  expect(clockText(14)).toBe('14s')
+  expect(clockText(59)).toBe('59s')
+  expect(clockText(60)).toBe('1m 0s')
+  expect(clockText(65)).toBe('1m 5s')
+  expect(clockText(3599)).toBe('59m 59s')
 })
