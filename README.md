@@ -18,15 +18,11 @@ claude plugin install matrix-spinner --marketplace SyntaxAsSpiral/claude-matrix-
 
 Answer `y` to add the marketplace, then choose a scope.
 
-Version 0.9.0 drops the status tool. The drawing is unchanged, and the mod still runs on its own.
-
 ## What you see
 
-- The verb is the word the render chain gives this plugin. A new word restarts the scramble and the gleam.
+- The verb is the word Claude Code is showing for the turn. A new word restarts the scramble and the gleam.
 - The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for three seconds, then its letters scramble into random glyphs and drop away, and the rest of the readout slides left to close the gap.
 - On anything other than the terminal, or while Claude Code is showing a state message, the usual spinner stays.
-
-Another mod may rewrite that word before this one draws it; gerunds is one such mod, and this plugin does not read it or depend on it.
 
 ## Privacy
 
