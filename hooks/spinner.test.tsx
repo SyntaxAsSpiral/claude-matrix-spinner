@@ -166,3 +166,54 @@ test('a long think earns one nudge on the next tool result', async ($, on) => {
   expect((third.context ?? []).length).toBe(0)
   await ui.unmount()
 })
+
+async function nudgeContext($: any, on: any, thinkFor: number) {
+  const clock = mock.clock(on)
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  on('ui.blit', () => ({ value: {} }))
+  on('tool.call', () => ({ result: {} }))
+  on('turn.step', async function* (_: any, e: any) {
+    yield { kind: 'thinking', index: 0, text: 'x' }
+    await clock.advance(thinkFor)
+    yield { kind: 'text', index: 1, text: 'y' }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 10, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 's1' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 's',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'thinking' },
+  })
+  for await (const _ of $.turn.step({ turnId: 's1', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  const r: any = await $.tool.call({ tool: 'Bash', command: 'ls' })
+  await ui.unmount()
+  return (r.context ?? []).join(' ')
+}
+
+test('longThinkSeconds lowers the threshold', { options: { longThinkSeconds: 3 } }, async ($, on) => {
+  expect(await nudgeContext($, on, 5000)).toContain('mcp__matrix-spinner__status')
+})
+
+test('longThinkSeconds raises the threshold', { options: { longThinkSeconds: 60 } }, async ($, on) => {
+  expect(await nudgeContext($, on, 30000)).toBe('')
+})
+
+test('longThinkSeconds 0 turns the nudge off', { options: { longThinkSeconds: 0 } }, async ($, on) => {
+  expect(await nudgeContext($, on, 30000)).toBe('')
+})
+
+test('an empty verb from the tool leaves the engine verb alone', async ($, on) => {
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: { tool: 'mcp__matrix-spinner__status' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'e1' })
+  const r: any = await $.tool.call({ tool: 'mcp__matrix-spinner__status', text: '   ' })
+  expect(r.result).toBe('ok')
+})

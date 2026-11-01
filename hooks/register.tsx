@@ -17,7 +17,7 @@ const MAX_DOTS = 3
 const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
 const THOUGHT_SHOW_MS = 4000 // how long 'thought for' stays after thinking ends
-const LONG_THINK_MS = 10000 // a stretch of thinking this long earns the model a nudge to pick a verb
+const LONG_THINK_SECONDS = 10 // default of the longThinkSeconds setting
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
 const DIM = 0x908caa // Rose Pine subtle
@@ -35,6 +35,7 @@ const randChar = () => CHARS[rnd(CHARS.length)]
 
 let timer: { cancel: () => void } | null = null
 let secsTimer: { cancel: () => void } | null = null
+let longThinkMs = LONG_THINK_SECONDS * 1000 // a stretch of thinking this long earns the model a nudge to pick a verb; 0 is off
 let owedVerb = false // set after a long think; the next tool result carries a nudge
 let startedAt = 0
 let mainTurn = '' // the turn whose steps are counted; a subagent's are not
@@ -146,7 +147,7 @@ function closeThinking(now: number) {
   if (thinkFrom >= 0) {
     lastThoughtMs = now - thinkFrom
     thoughtUntil = now + THOUGHT_SHOW_MS
-    if (lastThoughtMs >= LONG_THINK_MS) owedVerb = true
+    if (longThinkMs > 0 && lastThoughtMs >= longThinkMs) owedVerb = true
   }
   thinkFrom = -1
   isThinking = false
@@ -224,7 +225,10 @@ function stop() {
   site = ''
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  const seconds = Number(options.longThinkSeconds ?? LONG_THINK_SECONDS)
+  longThinkMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
+
   on('session.start', async ($, e, next) => {
     await $.tool.register({
       name: 'status',
@@ -241,7 +245,8 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__matrix-spinner__status' }, async ($, e: any) => {
-    const text = String(e.text ?? '').trim().slice(0, 48) || DEFAULT_LABEL
+    const text = String(e.text ?? '').trim().slice(0, 48)
+    if (text === '') return { result: 'ok' } // nothing to show: the engine's own verb stays
     reset(split(text).text, tick * FRAME_MS)
     glintTick = 0
     isCustom = true

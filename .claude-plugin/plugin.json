@@ -1,7 +1,7 @@
 {
   "name": "matrix-spinner",
-  "version": "0.3.2",
-  "description": "A matrix-style scrambling spinner for Claude Code with a gleam, a live readout and a verb the model can set after a long think, ported from the spinner in charmbracelet/mods.",
+  "version": "0.4.0",
+  "description": "A matrix-style scrambling spinner for Claude Code with a gleam, a live readout and an ephemeral verb the model can set after a long think, ported from the spinner in charmbracelet/mods.",
   "author": {
     "name": "SyntaxAsSpiral"
   },
@@ -13,5 +13,15 @@
     "animation",
     "terminal"
   ],
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "longThinkSeconds": {
+      "type": "number",
+      "title": "Long think (seconds)",
+      "description": "A single stretch of thinking this long lets the model pick one fresh verb for the rest of the turn. 0 turns it off.",
+      "default": 10,
+      "min": 0,
+      "max": 600
+    }
+  }
 }

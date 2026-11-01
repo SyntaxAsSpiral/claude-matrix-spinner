@@ -3,10 +3,10 @@
 matrix-spinner does not collect, store or send any data about you.
 
 - It reads the model's streamed output in memory, only to count characters and time thinking for the readout. Those counters are cleared at the end of each turn.
-- The only thing it keeps is the current spinner verb, as text in the session's own state. It is not written to a file and does not leave the session.
+- The only thing it keeps is a verb the model set this turn, as text in the session's own state, cleared when the turn ends. It is not written to a file and does not leave the session.
 - It makes no network requests.
 - It writes and reads no files, and starts no processes.
-- It reads no credentials, settings or environment variables.
+- It reads one setting of its own, `longThinkSeconds`. It reads no credentials, no other settings (not `spinnerVerbs`) and no environment variables.
 - It has no analytics or telemetry.
 
 ## What code runs
