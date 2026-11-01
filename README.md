@@ -35,13 +35,13 @@ Its one setting, `longThinkSeconds`, is in the `/config` menu. The mod sends not
 
 ## Colours and knobs
 
-A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. There are two fixed sets, and Claude Code's selected theme picks between them at the start of each turn: any light theme (`light`, `light-daltonized`, `light-ansi`) gets the light set, anything else gets the dark one. The mod does not look at the terminal, so the `auto` theme, which Claude Code matches to the terminal itself, counts as dark. On a light theme the gleam is a soft grey rather than white, which would disappear. The sets are `PALETTES` at the top of `hooks/register.tsx`:
+A `Raster` takes plain RGB, so the colours do not follow your terminal's theme. There are two fixed sets, and Claude Code's selected theme picks between them at the start of each turn: any light theme (`light`, `light-daltonized`, `light-ansi`) gets the light set, anything else gets the dark one. The mod does not look at the terminal, so the `auto` theme, which Claude Code matches to the terminal itself, counts as dark. On a light theme the gleam is a deep Macchiato mantle rather than white, which would disappear. The sets are `PALETTES` at the top of `hooks/register.tsx`:
 
 | | dark | light |
 |---|---|---|
 | `orange`, the mark and the scramble | `#f6c177` (Rosé Pine gold) | `#c2540a` (burnt orange) |
 | `text`, the verb | `#f5e0dc` (Mocha rosewater) | `#1c1c24` (near black) |
-| `gleam`, the gleam and the flash | `#ffffff` | `#8c8fa1` (Latte overlay1 grey) |
+| `gleam`, the gleam and the flash | `#ffffff` | `#1e2030` (Macchiato mantle) |
 | `dim`, the readout | `#908caa` (Rosé Pine subtle) | `#6c6f85` (Latte subtext0) |
 
 Other constants there: `N` (scramble length, 7), `FRAME_MS` (frame time), `GLINT_FRAMES` (how fast the gleam moves), `PULSE_FRAMES` (flash speed), `THOUGHT_SHOW_MS` (how long `thought for` stays).

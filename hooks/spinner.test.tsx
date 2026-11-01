@@ -247,7 +247,7 @@ test('a light Claude Code theme gets the light palette', async ($, on) => {
   const { colours, ui } = await paintedColours($, on, 'light-daltonized')
   for (let i = 0; i < 40; i++) await clock.advance(45)
   expect(colours.has(0xc2540a)).toBe(true)
-  expect(colours.has(0x8c8fa1)).toBe(true)
+  expect(colours.has(0x1e2030)).toBe(true)
   expect(colours.has(0xffffff)).toBe(false)
   expect(colours.has(0xf6c177)).toBe(false)
   await ui.unmount()

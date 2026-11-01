@@ -22,10 +22,10 @@ const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 52 // room for ' (59:59 · ↓ 99.9k tokens · thought for 59:59)'
 const KEY = 'matrix'
 const DEFAULT = 0x01000000 // the terminal's own foreground
-// RGB is fixed, so a light terminal needs its own set: darker, with a soft grey gleam, since white would vanish
+// RGB is fixed, so a light terminal needs its own set: darker, with a deep gleam, since white would vanish
 const PALETTES = {
   dark: { orange: 0xf6c177, text: 0xf5e0dc, gleam: 0xffffff, dim: 0x908caa }, // Rose Pine gold, Mocha rosewater, white, Rose Pine subtle
-  light: { orange: 0xc2540a, text: 0x1c1c24, gleam: 0x8c8fa1, dim: 0x6c6f85 }, // burnt orange, near black, Latte overlay1 grey, Latte subtext0
+  light: { orange: 0xc2540a, text: 0x1c1c24, gleam: 0x1e2030, dim: 0x6c6f85 }, // burnt orange, near black, Macchiato mantle, Latte subtext0
 }
 let ORANGE = PALETTES.dark.orange // the mark and the scramble
 let TEXT = PALETTES.dark.text // the verb
