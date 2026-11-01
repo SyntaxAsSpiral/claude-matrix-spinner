@@ -347,7 +347,7 @@ export const register: Register = (on) => {
     site = e.requestId
     return (
       <Box paddingTop={1} flexDirection="row">
-        {parts.glyph !== '' && <Text color="#f6c177">{parts.glyph + ' '}</Text>}
+        {parts.glyph !== '' && <Text color={'#' + ORANGE.toString(16).padStart(6, '0')}>{parts.glyph + ' '}</Text>}
         <Raster key={KEY} columns={columns} rows={1} cells={compose(tick * FRAME_MS, -99, false)} />
       </Box>
     )
