@@ -16,6 +16,7 @@ const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
 const THOUGHT_SHOW_MS = 3000 // how long 'thought for' stays after thinking ends
 const THOUGHT_OUT_MS = 900 // then its letters scramble and drop out over this long
+const THOUGHT_IN_MS = 300 // 'thinking' scrambles into 'thought for Ns', settling left to right over this long
 const TOK_JUMP = 50 // tokens come in bursts: a jump of at least this many scrambles the count
 const TOK_SETTLE_MS = 250 // and its characters land on the new count, left to right, over this long
 const MARK_FRAMES = 4 // frames per step of the mark
@@ -234,7 +235,10 @@ function readout(now: number): { head: string; seg: string; tail: string; out: n
   // like the default: 'thinking' while it is under way, then 'thought for 5s' for a few seconds, then it scrambles away
   if (isThinking) meta += ' · thinking'
   else if (now < thoughtUntil + THOUGHT_OUT_MS && lastThoughtMs >= 1000) {
-    seg = ' · thought for ' + clockText(Math.floor(lastThoughtMs / 1000))
+    // it arrives as a scramble out of 'thinking': each letter is a random glyph until it lands, left to right
+    const body = [...('thought for ' + clockText(Math.floor(lastThoughtMs / 1000)))]
+    const since = now - (thoughtUntil - THOUGHT_SHOW_MS)
+    seg = ' · ' + body.map((c, j) => (c === ' ' || since >= ((j + 1) * THOUGHT_IN_MS) / body.length ? c : randChar())).join('')
     out = Math.max(0, (now - thoughtUntil) / THOUGHT_OUT_MS)
   }
   return { head: ' (' + meta, seg, tail: ')', out }

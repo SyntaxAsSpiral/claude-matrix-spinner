@@ -243,7 +243,12 @@ test('thought for holds for three seconds, then scrambles away', async ($, on) =
   })
   for await (const _ of $.turn.step({ turnId: 'th', index: 0, model: 'm', messageCount: 1 } as any)) {}
   const start = seen.length
-  await clock.advance(2900)
+  await clock.advance(90) // just after thinking ended: 'thinking' is scrambling into 'thought for'
+  const arriving = seen[seen.length - 1].chars
+  expect(arriving).not.toMatch(/thinking/)
+  expect(arriving).not.toMatch(/thought for \d+s/)
+  expect(arriving).toMatch(/tokens · \S/) // the segment is there, still in random glyphs
+  await clock.advance(2810)
   const holding = seen[seen.length - 1]
   expect(holding.chars).toMatch(/thought for \d+s/)
   await clock.advance(400) // 3.3 s after thinking ended: the letters are scrambling
