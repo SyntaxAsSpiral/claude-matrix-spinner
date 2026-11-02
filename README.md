@@ -1,6 +1,6 @@
 # matrix-spinner
 
-![The spinner on a dark theme](docs/spinner-dark.gif)
+![The spinner on a dark theme](docs/rain-dark.gif)
 
 ![The spinner on a light theme](docs/spinner-light.gif)
 
