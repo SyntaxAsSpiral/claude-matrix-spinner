@@ -228,7 +228,8 @@ function readout(now: number): { head: string; seg: string; tail: string; out: n
   shownTokens = tokens
   if (tokens > 0) {
     const t = [...tokenText(tokens)]
-    meta += ' · ↓ ' + t.map((c, j) => (now >= tokFrom + ((j + 1) * TOK_SETTLE_MS) / t.length ? c : randChar())).join('') + ' tokens'
+    // the digits scramble; the k of a thousand stays put while the count has one
+    meta += ' · ↓ ' + t.map((c, j) => (c === 'k' || now >= tokFrom + ((j + 1) * TOK_SETTLE_MS) / t.length ? c : randChar())).join('') + ' tokens'
   }
   let seg = ''
   let out = 0

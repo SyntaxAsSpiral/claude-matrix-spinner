@@ -328,3 +328,45 @@ test('a burst of tokens scrambles the count, which settles on the new value; a s
   expect(seen.settled).toBe('210')
   await ui.unmount()
 })
+
+test('in the thousands, a burst scrambles the digits and the k stays put', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  let last = ''
+  on('ui.blit', (_: any, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    let s = ''
+    for (let i = 0; i < w.length; i += 3) s += String.fromCodePoint(w[i])
+    last = s
+    return { value: {} }
+  })
+  const counts: string[] = []
+  on('turn.step', async function* (_: any, e: any) {
+    yield { kind: 'text', index: 0, text: 'y'.repeat(4800) } // 1.2k
+    await clock.advance(400)
+    yield { kind: 'text', index: 0, text: 'y'.repeat(4000) } // a burst to 2.2k
+    for (let i = 0; i < 5; i++) {
+      await clock.advance(45)
+      counts.push(last.match(/↓ (\S+) tokens/)?.[1] ?? '')
+    }
+    await clock.advance(400)
+    counts.push(last.match(/↓ (\S+) tokens/)?.[1] ?? '')
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 2200, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'tk' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'tk',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'responding' },
+  })
+  for await (const _ of $.turn.step({ turnId: 'tk', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  expect(counts.slice(0, 5).some(c => c !== '2.2k')).toBe(true) // it did scramble
+  for (const c of counts) expect(c.endsWith('k')).toBe(true) // and the k never moved
+  expect(counts.at(-1)).toBe('2.2k')
+  await ui.unmount()
+})
