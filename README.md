@@ -20,6 +20,11 @@ Answer `y` to add the marketplace, then choose a scope.
 
 ## What you see
 
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/spinner-light.gif">
+  <img src="docs/spinner-dark.gif" alt="The spinner: the verb settles out of the scramble, the gleam crosses, the readout says thinking, then 'thought for 3s' scrambles out.">
+</picture>
+
 - The verb is the word Claude Code is showing for the turn. A new word restarts the scramble and the gleam.
 - The readout shows elapsed time, a token count once the turn has produced any, and `thinking` while the model is thinking. After a thought of at least a second it shows `thought for` for three seconds, then its letters scramble into random glyphs and drop away, and the rest of the readout slides left to close the gap.
 - On anything other than the terminal, or while Claude Code is showing a state message, the usual spinner stays.
