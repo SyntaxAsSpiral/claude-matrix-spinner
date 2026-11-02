@@ -280,3 +280,46 @@ test('the readout clock reads 14s, then 1m 5s', () => {
   expect(clockText(65)).toBe('1m 5s')
   expect(clockText(3599)).toBe('59m 59s')
 })
+
+test('a burst of tokens scrambles the count, which settles on the new value; a small step does not', async ($, on) => {
+  const clock = mock.clock(on)
+  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  let last = ''
+  on('ui.blit', (_: any, e: any) => {
+    const w = new Uint32Array((Uint8Array as any).fromBase64(e.cells).buffer)
+    let s = ''
+    for (let i = 0; i < w.length; i += 3) s += String.fromCodePoint(w[i])
+    last = s
+    return { value: {} }
+  })
+  const count = () => last.match(/↓ (\S+) tokens/)?.[1]
+  const seen: Record<string, string | undefined> = {}
+  on('turn.step', async function* (_: any, e: any) {
+    yield { kind: 'text', index: 0, text: 'y'.repeat(40) } // 10 tokens: under the threshold
+    await clock.advance(100)
+    seen.small = count()
+    yield { kind: 'text', index: 0, text: 'y'.repeat(800) } // 200 more: a burst
+    await clock.advance(50)
+    seen.burst = count()
+    await clock.advance(300)
+    seen.settled = count()
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { output_tokens: 210, input_tokens: 0, model: 'm' } } as any
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'hi', turnId: 'tb' })
+  const ui = await $.ui.mount({
+    plugin: 'matrix-spinner', surface: 'terminal', component: 'Spinner', requestId: 'tb',
+    props: { word: 'Working', message: null, suffix: '…', mode: 'responding' },
+  })
+  for await (const _ of $.turn.step({ turnId: 'tb', index: 0, model: 'm', messageCount: 1 } as any)) {}
+  expect(seen.small).toBe('10')
+  expect(seen.burst).not.toBe('210') // mid-scramble: at least its last character is still a random glyph
+  expect(seen.burst?.length).toBe(3)
+  expect(seen.settled).toBe('210')
+  await ui.unmount()
+})

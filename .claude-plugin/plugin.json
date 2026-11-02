@@ -1,6 +1,6 @@
 {
   "name": "matrix-spinner",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "A matrix-style scrambling spinner for Claude Code with a gleam and a live readout, ported from the spinner in charmbracelet/mods. It draws the word the render chain gives it.",
   "author": {
     "name": "SyntaxAsSpiral"

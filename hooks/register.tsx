@@ -16,6 +16,8 @@ const PREFIX = 2 // the mark and a space before the scramble
 const MARK = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'] // Claude Code's own spinner mark, grown and shrunk
 const THOUGHT_SHOW_MS = 3000 // how long 'thought for' stays after thinking ends
 const THOUGHT_OUT_MS = 900 // then its letters scramble and drop out over this long
+const TOK_JUMP = 50 // tokens come in bursts: a jump of at least this many scrambles the count
+const TOK_SETTLE_MS = 250 // and its characters land on the new count, left to right, over this long
 const MARK_FRAMES = 4 // frames per step of the mark
 const TIMER_W = 56 // room for ' (59m 59s · ↓ 99.9k tokens · thought for 59m 59s)'
 const KEY = 'matrix'
@@ -52,6 +54,8 @@ let startedAt = 0
 let mainTurn = '' // the turn whose steps are counted; a subagent's are not
 let outTokens = 0 // output tokens of finished steps, as the API reported them
 let stepChars = 0 // characters streamed in the step under way, for a live estimate
+let shownTokens = 0 // the count the readout last drew
+let tokFrom = -Infinity // when the count last jumped; its characters land after this
 let lastThoughtMs = 0 // how long the latest stretch of thinking took
 let thoughtUntil = 0 // 'thought for' is shown until then
 let thinkFrom = -1 // when the current stretch of thinking began, or -1
@@ -219,7 +223,12 @@ const tokenText = (n: number) => (n < 1000 ? String(n) : (n / 1000).toFixed(1) +
 function readout(now: number): { head: string; seg: string; tail: string; out: number } {
   let meta = clockText(elapsed)
   const tokens = outTokens + Math.round(stepChars / 4)
-  if (tokens > 0) meta += ' · ↓ ' + tokenText(tokens) + ' tokens'
+  if (tokens - shownTokens >= TOK_JUMP) tokFrom = now
+  shownTokens = tokens
+  if (tokens > 0) {
+    const t = [...tokenText(tokens)]
+    meta += ' · ↓ ' + t.map((c, j) => (now >= tokFrom + ((j + 1) * TOK_SETTLE_MS) / t.length ? c : randChar())).join('') + ' tokens'
+  }
   let seg = ''
   let out = 0
   // like the default: 'thinking' while it is under way, then 'thought for 5s' for a few seconds, then it scrambles away
@@ -297,6 +306,8 @@ export const register: Register = (on) => {
     mainTurn = e.turnId
     outTokens = 0
     stepChars = 0
+    shownTokens = 0
+    tokFrom = -Infinity
     lastThoughtMs = 0
     thoughtUntil = 0
     thinkFrom = -1
