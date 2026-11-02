@@ -1,8 +1,8 @@
 # matrix-spinner
 
-![The spinner on a dark theme](docs/spin-dark.gif)
+![The spinner on a dark theme](docs/readout-dark.gif)
 
-![The spinner on a light theme](docs/spin-light.gif)
+![The spinner on a light theme](docs/readout-light.gif)
 
 A mod for Claude Code that replaces the working spinner with a matrix-style one. Characters scramble, the verb settles out of them, a gleam sweeps across, and a readout follows, like `(14s · ↓ 801 tokens · thought for 3s)`. 
 
